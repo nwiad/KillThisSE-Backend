@@ -1,10 +1,10 @@
 #!/bin/sh
-python3 manage.py makemigrations board
+python3 manage.py makemigrations
 python3 manage.py migrate
 
-uwsgi --module=DjangoHW.wsgi:application \
+uwsgi --module=IMBackend.wsgi:application \
     --env DJANGO_SETTINGS_MODULE=IMBackend.settings \
-    --main \
+    --master \
     --http=0.0.0.0:80 \
     --processes=5 \
     --harakiri=20 \
