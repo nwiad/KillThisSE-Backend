@@ -91,7 +91,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',  # 默认
         'NAME': 'IM',  # 连接的数据库
-        'HOST': '101.5.128.107',  # mysql的ip地址
+        'HOST': '183.173.106.194',  # mysql的ip地址
         'PORT': 3306,  # mysql的端口
         'USER': 'root',  # mysql的用户名
         'PASSWORD': '123456'  # mysql的密码
