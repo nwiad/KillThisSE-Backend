@@ -80,23 +80,23 @@ WSGI_APPLICATION = 'IMBackend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
-
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',  # 默认
-        'NAME': 'IM',  # 连接的数据库
-        'HOST': '101.5.128.107',  # mysql的ip地址
-        'PORT': 3306,  # mysql的端口
-        'USER': 'root',  # mysql的用户名
-        'PASSWORD': '123456'  # mysql的密码
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',  # 默认
+#         'NAME': 'IM',  # 连接的数据库
+#         'HOST': '183.173.106.194',  # mysql的ip地址
+#         'PORT': 3306,  # mysql的端口
+#         'USER': 'root',  # mysql的用户名
+#         'PASSWORD': '123456'  # mysql的密码
+#     }
+# }
 
 
 # Password validation
@@ -115,6 +115,18 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
+]
+
+
+# Password encryption
+# https://docs.djangoproject.com/zh-hans/4.1/topics/auth/passwords/
+
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+    'django.contrib.auth.hashers.ScryptPasswordHasher',
 ]
 
 
