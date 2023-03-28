@@ -90,8 +90,8 @@ WSGI_APPLICATION = 'IMBackend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',  # 默认
-        'NAME': 'IM',  # 连接的数据库
-        'HOST': database.KillThisSE.secoder.local,  # mysql的ip地址
+        'NAME': 'im',  # 连接的数据库
+        'HOST': 'database.KillThisSE.secoder.local',  # mysql的ip地址
         'PORT': 3306,  # mysql的端口
         'USER': 'root',  # mysql的用户名
         'PASSWORD': '123456'  # mysql的密码
