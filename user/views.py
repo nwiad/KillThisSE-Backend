@@ -29,9 +29,11 @@ def user_register(req: HttpRequest):
         m_password = make_password(password)
 
         if not name_valid(name):
-            return request_failed(1, "Illegal username")
+            return request_failed(1, "不合法的用户名")
         elif name_exist(name):
-            return request_failed(2, "Username already exists")            
+            return request_failed(2, "用户名已经存在")    
+        elif not password_valid(password):
+            return request_failed(3, "不合法的密码")        
         else:
             user = User(name=name, password=m_password)
             user.save()

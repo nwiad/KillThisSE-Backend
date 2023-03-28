@@ -15,4 +15,9 @@ def name_exist(name: str):
     user = User.objects.filter(name=name).first()
     return user
 
+def password_valid(password: str):
+    """
+    check if password valid
+    """
+    return re.match(r"^[a-zA-Z0-9_]{6,16}$" ,password) is not None
 
