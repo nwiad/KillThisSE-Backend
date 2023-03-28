@@ -2,6 +2,7 @@ image: registry.secoder.net/tool/deployer
 
 stages:
   - build
+  - test
   - deploy
 
 build:
@@ -14,6 +15,21 @@ build:
     - deployer build
   only:
     - main
+
+unit-test:
+  image: python:3.9
+  stage: test
+  before_script:
+    - pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
+  script:
+    - python manage.py makemigrations
+    - python manage.py migrate
+    - sh test.sh
+  after_script:
+    - SUFFIX=$RANDOM
+    - curl "http://api.secoder.net/static/sonar-scanner.tar.gz" -s -o "/tmp/sonar-$SUFFIX.tar.gz"
+    - tar -xf "/tmp/sonar-$SUFFIX.tar.gz"  -C /opt
+    - /opt/sonar-scanner/bin/sonar-scanner
 
 deploy:
   stage: deploy
