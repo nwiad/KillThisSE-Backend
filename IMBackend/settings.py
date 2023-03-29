@@ -80,23 +80,23 @@ WSGI_APPLICATION = 'IMBackend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
-
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',  # 默认
-        'NAME': 'IM',  # 连接的数据库
-        'HOST': 'database.KillThisSE.secoder.local',  # mysql的ip地址
-        'PORT': 3306,  # mysql的端口
-        'USER': 'root',  # mysql的用户名
-        'PASSWORD': '123456'  # mysql的密码
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',  # 默认
+#         'NAME': 'IM',  # 连接的数据库
+#         'HOST': '183.172.24.92',  # mysql的ip地址
+#         'PORT': 3306,  # mysql的端口
+#         'USER': 'root',  # mysql的用户名
+#         'PASSWORD': '123456'  # mysql的密码
+#     }
+# }
 
 
 # Password validation
