@@ -1,5 +1,6 @@
 #!/bin/sh
-python3 manage.py makemigrations
+# 需要指定所有应用
+python3 manage.py makemigrations user
 python3 manage.py migrate
 
 uwsgi --module=IMBackend.wsgi:application \
