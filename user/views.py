@@ -7,6 +7,7 @@ from utils.utils_request import BAD_METHOD, request_failed, request_success, ret
 from utils.utils_require import MAX_CHAR_LENGTH, CheckRequire, require
 from utils.utils_valid import *
 from utils.utils_time import get_timestamp
+from utils.utils_sessions import *
 
 @CheckRequire
 def startup(req: HttpRequest):
@@ -25,18 +26,22 @@ def user_register(req: HttpRequest):
     if req.method == "POST":
         body = json.loads(req.body.decode("utf-8"))
 
+        if 'user' in body.keys():
+            return request_failed(4, "Bad status: already logged in")
+
         name, password = check_for_user_data(body)
         m_password = make_password(password)
 
         if not name_valid(name):
-            return request_failed(1, "不合法的用户名")
+            return request_failed(1, "Illegal username")
         elif name_exist(name):
-            return request_failed(2, "用户名已经存在")    
+            return request_failed(2, "Username already exists")    
         elif not password_valid(password):
-            return request_failed(3, "不合法的密码")        
-        else:
+            return request_failed(3, "Illegal password")        
+        else: # Successful Create
             user = User(name=name, password=m_password)
             user.save()
+            bind_session_id(get_session_id(body), user)
 
         return request_success({"isCreate": True})
     
@@ -44,16 +49,36 @@ def user_register(req: HttpRequest):
         return BAD_METHOD
     
 @CheckRequire
+def user_cancel_account(req: HttpRequest):
+    if req.method == "POST":
+        body = json.loads(req.body.decode("utf-8"))
+
+        user = verify_session_id(get_session_id(body))
+
+        if not user:
+            return request_failed(1, "Not logged in")
+
+        user.delete()
+        
+    else:
+        return BAD_METHOD
+    
+@CheckRequire
 def user_login(req: HttpRequest):
     if req.method == "POST":
         body = json.loads(req.body.decode("utf-8"))
+
+        if verify_session_id(get_session_id(body)):
+            return request_failed(4, "Already logged in")
 
         name, password = check_for_user_data(body)
 
         if name_valid(name):
             user = name_exist(name)
             if user and user.name == name:
-                if check_password(password, user.password):
+                if check_password(password, user.password): # Password in database is encrypted
+                    # Successful Login
+                    bind_session_id(get_session_id(body), user)
                     return request_success({"Logged in": True})
                 else:
                     return request_failed(3, "Wrong password")
@@ -61,6 +86,21 @@ def user_login(req: HttpRequest):
                 return request_failed(2, "User does not exist")
         else:
             return request_failed(1, "Illegal username")
+        
+@CheckRequire
+def user_logout(req: HttpRequest):
+    if req.method == "POST":
+        body = json.loads(req.body.decode("utf-8"))
+
+        if not verify_session_id(get_session_id(body)):
+            return request_failed(1, "Not logged in")
+        
+        disable_session_id(get_session_id(body))
+        return request_success({'isLoggedout': True})
+
+    else:
+        return BAD_METHOD
+
     
 @CheckRequire
 def users(req: HttpRequest):

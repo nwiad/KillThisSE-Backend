@@ -2,7 +2,7 @@ from django.db import models
 
 import datetime
 
-from utils import utils_time
+from utils.utils_time import *
 from utils.utils_require import MAX_CHAR_LENGTH
 
 class User(models.Model):
@@ -21,3 +21,12 @@ class User(models.Model):
     
     def __str__(self):
         return self.name
+    
+
+class SessionPool(models.Model):
+    sessionId = models.CharField(max_length=32)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    expireAt = models.DateTimeField(default=get_datetime)
+
+    class Mata:
+        indexes = [models.Index(fields=["sessionId"])]
