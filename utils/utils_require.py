@@ -1,6 +1,9 @@
+import json
+
 from functools import wraps
 
-from utils.utils_request import request_failed
+from utils.utils_request import *
+from utils.utils_sessions import verify_session_id, get_session_id
 
 MAX_CHAR_LENGTH = 255
 
@@ -14,6 +17,17 @@ def CheckRequire(check_fn):
             # Handle exception e
             error_code = -2 if len(e.args) < 2 else e.args[1]
             return request_failed(error_code, e.args[0], 400)  # Refer to below
+    return decorated
+
+def CheckLogin(check_fn):
+    @wraps(check_fn)
+    def decorated(*args, **kwargs):
+        req = args[1]
+        body = json.loads(req.body.decode("utf-8"))
+        if verify_session_id(get_session_id(body)):
+            return check_fn(*args, **kwargs)
+        else:
+            return request_failed(1, "Not logged in", 400)
     return decorated
 
 

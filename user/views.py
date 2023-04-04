@@ -2,9 +2,12 @@ import json
 from django.http import HttpRequest, HttpResponse
 from django.contrib.auth.hashers import make_password, check_password
 
+from rest_framework import viewsets
+from rest_framework.decorators import action
+
 from user.models import User
 from utils.utils_request import BAD_METHOD, request_failed, request_success, return_field
-from utils.utils_require import MAX_CHAR_LENGTH, CheckRequire, require
+from utils.utils_require import MAX_CHAR_LENGTH, CheckRequire, CheckLogin, require
 from utils.utils_valid import *
 from utils.utils_time import get_timestamp
 from utils.utils_sessions import *
@@ -13,21 +16,17 @@ from utils.utils_sessions import *
 def startup(req: HttpRequest):
     return request_success({"message": "There is no exception in this library"})
 
-
 def check_for_user_data(body):
     name = require(body, "name", "string", err_msg="Missing or error type of [name]")
     password = require(body, "password", "string", err_msg="Missing or error type of [password]")
     
     return name, password
 
-
-@CheckRequire
-def user_register(req: HttpRequest):
-    if req.method == "POST":
+class UserViewSet(viewsets.ViewSet):
+    @CheckRequire
+    @action(detail=False, methods=["POST"])
+    def register(self, req: HttpRequest):
         body = json.loads(req.body.decode("utf-8"))
-
-        if 'user' in body.keys():
-            return request_failed(4, "Bad status: already logged in")
 
         name, password = check_for_user_data(body)
         m_password = make_password(password)
@@ -43,29 +42,21 @@ def user_register(req: HttpRequest):
             user.save()
             bind_session_id(get_session_id(body), user)
 
-        return request_success({"isCreate": True})
-    
-    else :
-        return BAD_METHOD
-    
-@CheckRequire
-def user_cancel_account(req: HttpRequest):
-    if req.method == "POST":
+        return request_success({"Created": True})
+        
+    @CheckRequire
+    @action(detail=False, methods=["POST"])
+    def cancel_account(self, req: HttpRequest):
         body = json.loads(req.body.decode("utf-8"))
-
         user = verify_session_id(get_session_id(body))
-
         if not user:
             return request_failed(1, "Not logged in")
 
         user.delete()
         
-    else:
-        return BAD_METHOD
-    
-@CheckRequire
-def user_login(req: HttpRequest):
-    if req.method == "POST":
+    @CheckRequire
+    @action(detail=False, methods=["POST"])
+    def login(self, req: HttpRequest):
         body = json.loads(req.body.decode("utf-8"))
 
         if verify_session_id(get_session_id(body)):
@@ -86,25 +77,49 @@ def user_login(req: HttpRequest):
                 return request_failed(2, "User does not exist")
         else:
             return request_failed(1, "Illegal username")
-        
-@CheckRequire
-def user_logout(req: HttpRequest):
-    if req.method == "POST":
+            
+    @CheckRequire
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def logout(self, req: HttpRequest):
         body = json.loads(req.body.decode("utf-8"))
-
-        if not verify_session_id(get_session_id(body)):
-            return request_failed(1, "Not logged in")
-        
         disable_session_id(get_session_id(body))
-        return request_success({'isLoggedout': True})
+        return request_success({'Logged out': True})
 
-    else:
-        return BAD_METHOD
+        
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def modify(self, req: HttpRequest):
+        body = json.loads(req.body.decode("utf-8"))
+        user = verify_session_id(get_session_id(body))
+        new_name = body.get('name')
+        new_password = body.get('password')
+        new_avatar = body.get('avatar')
 
-    
-@CheckRequire
-def users(req: HttpRequest):
-    if req.method == "GET":
+        if new_name:
+            if not name_valid(new_name):
+                return request_failed(1, "Illegal username")
+            elif name_exist(new_name):
+                return request_failed(2, "Username already exists")
+            else:
+                user.name = new_name
+        
+        if new_password:
+            if not password_valid(new_password):
+                return request_failed(3, "Illegal password")
+            else :
+                user.password = new_password
+
+        if new_avatar:
+            user.avatar = new_avatar
+
+        user.save()
+        return request_success({"Modified": True})
+
+
+    @CheckRequire
+    @action(detail=False, methods=["GET"])
+    def users(self, req: HttpRequest):
         users = User.objects.all().order_by('register_time')
         return_data = {
             "users": [
@@ -112,6 +127,3 @@ def users(req: HttpRequest):
             for user in users],
         }
         return request_success(return_data)
-
-    else :
-        return BAD_METHOD

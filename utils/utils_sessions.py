@@ -1,10 +1,8 @@
-# Reference: ReqMan-backend
-
 import datetime
 import pytz
 from IMBackend.settings import TIME_ZONE
 
-from user.models import *
+from user.models import User, SessionPool
 
 def get_session_id(body):
     return body.get('sessionId')

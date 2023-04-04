@@ -3,7 +3,8 @@ from django.db import models
 import datetime
 
 from utils.utils_time import *
-from utils.utils_require import MAX_CHAR_LENGTH
+
+MAX_CHAR_LENGTH = 255
 
 class User(models.Model):
     user_id = models.BigAutoField(primary_key=True)
@@ -11,6 +12,7 @@ class User(models.Model):
     password = models.CharField(max_length=MAX_CHAR_LENGTH)
     register_time = models.DateTimeField(default=datetime.datetime.now)
     login_time = models.DateTimeField(default=datetime.datetime.now)
+    avatar = models.CharField(max_length=MAX_CHAR_LENGTH, default="")
 
     def serialize(self):
         return {
