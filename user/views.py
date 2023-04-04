@@ -118,12 +118,12 @@ class UserViewSet(viewsets.ViewSet):
     @CheckRequire
     @action(detail=False, methods=["POST"])
     @CheckLogin
-    def send_friend_request(req: HttpRequest):
+    def send_friend_request(self, req: HttpRequest):
         body = json.loads(req.body.decode("utf-8"))
         user = verify_session_id(get_session_id(body))
 
         friend_user_id = body.get('friend_user_id')
-        friend = User.objects.filter(user_id = friend_user_id)
+        friend = User.objects.filter(user_id=friend_user_id).first()
         if not friend:
             return request_failed(1, "Friend not exist")
         
@@ -144,12 +144,12 @@ class UserViewSet(viewsets.ViewSet):
     @CheckRequire
     @action(detail=False, methods=["POST"])
     @CheckLogin
-    def respond_friend_request(req: HttpRequest):
+    def respond_friend_request(self, req: HttpRequest):
         body = json.loads(req.body.decode("utf-8"))
         user = verify_session_id(get_session_id(body))
 
         friend_user_id = body.get('friend_user_id')
-        friend = User.objects.filter(user_id = friend_user_id)
+        friend = User.objects.filter(user_id=friend_user_id)
         if not friend:
             return request_failed(1, "Friend not exist")
         
