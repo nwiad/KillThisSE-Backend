@@ -24,10 +24,28 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-zsd1(jud4^7u1-^^vzb8@o1=^@_q55(owv0jip$_0&2u$cwc#3'
 
 # SECURITY WARNING: don't run with debug turned on in production!
+# Database
+# https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 if os.getenv('DEPLOY'):
     DEBUG = False
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',  # 默认
+            'NAME': 'im',  # 连接的数据库
+            'HOST': 'database.KillThisSE.secoder.local',  # mysql的ip地址
+            'PORT': 3306,  # mysql的端口
+            'USER': 'root',  # mysql的用户名
+            'PASSWORD': '123456'  # mysql的密码
+        }
+    }
 else:
     DEBUG = True
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 ALLOWED_HOSTS = [
     '*'
@@ -76,28 +94,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'IMBackend.wsgi.application'
-
-
-# Database
-# https://docs.djangoproject.com/en/4.1/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.mysql',  # 默认
-#         'NAME': 'IM',  # 连接的数据库
-#         'HOST': '183.172.24.92',  # mysql的ip地址
-#         'PORT': 3306,  # mysql的端口
-#         'USER': 'root',  # mysql的用户名
-#         'PASSWORD': '123456'  # mysql的密码
-#     }
-# }
 
 
 # Password validation
