@@ -23,7 +23,25 @@ class User(models.Model):
     
     def __str__(self):
         return self.name
-    
+
+
+class Friendship(models.Model):
+    user_id = models.IntegerField()
+    friend_user_id = models.IntegerField()
+    update_time = models.DateTimeField(default=datetime.datetime.now)  
+
+    class Meta:
+        unique_together = ('user_id', 'friend_user_id')
+
+
+class FriendshipRequest(models.Model):
+    user_id = models.IntegerField()
+    friend_user_id = models.IntegerField()
+    update_time = models.DateTimeField(default=datetime.datetime.now)
+
+    class Meta:
+        unique_together = ('user_id', 'friend_user_id')
+
 
 class SessionPool(models.Model):
     sessionId = models.CharField(max_length=32)

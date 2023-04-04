@@ -5,16 +5,13 @@ from django.contrib.auth.hashers import make_password, check_password
 from rest_framework import viewsets
 from rest_framework.decorators import action
 
-from user.models import User
+from user.models import User, Friendship, FriendshipRequest
 from utils.utils_request import BAD_METHOD, request_failed, request_success, return_field
 from utils.utils_require import MAX_CHAR_LENGTH, CheckRequire, CheckLogin, require
 from utils.utils_valid import *
 from utils.utils_time import get_timestamp
 from utils.utils_sessions import *
-
-@CheckRequire
-def startup(req: HttpRequest):
-    return request_success({"message": "There is no exception in this library"})
+from utils.utils_friends import isFriend, requestExists, addFriends, sendFriendRequest
 
 def check_for_user_data(body):
     name = require(body, "name", "string", err_msg="Missing or error type of [name]")
@@ -87,6 +84,7 @@ class UserViewSet(viewsets.ViewSet):
         return request_success({'Logged out': True})
 
         
+    @CheckRequire
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def modify(self, req: HttpRequest):
@@ -115,7 +113,56 @@ class UserViewSet(viewsets.ViewSet):
 
         user.save()
         return request_success({"Modified": True})
+    
+    
+    @CheckRequire
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def send_friend_request(req: HttpRequest):
+        body = json.loads(req.body.decode("utf-8"))
+        user = verify_session_id(get_session_id(body))
 
+        friend_user_id = body.get('friend_user_id')
+        friend = User.objects.filter(user_id = friend_user_id)
+        if not friend:
+            return request_failed(1, "Friend not exist")
+        
+        if isFriend(user, friend):
+            return request_failed(2, "Already become friends")
+        
+        if requestExists(user, friend):
+            return request_failed(3, "Request already exists")
+        elif requestExists(friend, user): 
+            addFriends(user, friend)
+            requestExists(friend, user).delete()
+            return request_success({"Become Friends": True})
+        
+        sendFriendRequest(user, friend)
+        return request_success({"Send request": True})
+
+    
+    @CheckRequire
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def respond_friend_request(req: HttpRequest):
+        body = json.loads(req.body.decode("utf-8"))
+        user = verify_session_id(get_session_id(body))
+
+        friend_user_id = body.get('friend_user_id')
+        friend = User.objects.filter(user_id = friend_user_id)
+        if not friend:
+            return request_failed(1, "Friend not exist")
+        
+        response = body.get('response')
+
+        if response == "accept":
+            addFriends(user, friend)
+            requestExists(friend, user).delete()
+            return request_success({"Become Friends": True})
+        elif response == "reject":
+            requestExists(friend, user).delete()
+            return request_success({"Become Friends": False})
+    
 
     @CheckRequire
     @action(detail=False, methods=["GET"])
