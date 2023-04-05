@@ -7,11 +7,12 @@ from rest_framework.decorators import action
 
 from user.models import User, Friendship, FriendshipRequest
 from utils.utils_request import BAD_METHOD, request_failed, request_success, return_field
-from utils.utils_require import MAX_CHAR_LENGTH, CheckRequire, CheckLogin, require
+from utils.utils_require import CheckRequire, CheckLogin, require
 from utils.utils_valid import *
 from utils.utils_time import get_timestamp
 from utils.utils_sessions import *
 from utils.utils_friends import isFriend, requestExists, addFriends, sendFriendRequest
+from utils.utils_constant import MAX_CHAR_LENGTH
 
 def check_for_user_data(body):
     name = require(body, "name", "string", err_msg="Missing or error type of [name]")
@@ -37,14 +38,15 @@ class UserViewSet(viewsets.ViewSet):
         else: # Successful Create
             user = User(name=name, password=m_password)
             user.save()
-            bind_session_id(get_session_id(req), user)
+            # bind_session_id(get_session_id(req), user)
 
         return request_success({"Created": True})
         
     @CheckRequire
     @action(detail=False, methods=["POST"])
     def cancel_account(self, req: HttpRequest):
-        user = verify_session_id(req)
+        user = verify_session_id(get_session_id(req))
+        
         if not user:
             return request_failed(1, "Not logged in")
 
@@ -160,7 +162,24 @@ class UserViewSet(viewsets.ViewSet):
         elif response == "reject":
             requestExists(friend, user).delete()
             return request_success({"Become Friends": False})
+        
     
+    @CheckRequire
+    @action(detail=False, methods=['GET'])
+    @CheckLogin
+    def get_profile(self, req:HttpRequest):
+        user = verify_session_id(get_session_id(req))
+
+        return_data = return_field(user.serialize(), ["user_id", "name", "avatar"])
+        return request_success(return_data)
+    
+
+    @CheckRequire
+    @action(detail=False, methods=["GET"])
+    @CheckLogin
+    def get_friends(self, req:HttpRequest):
+        user = verify_session_id(get_session_id(req))
+        
 
     @CheckRequire
     @action(detail=False, methods=["GET"])
@@ -168,7 +187,7 @@ class UserViewSet(viewsets.ViewSet):
         users = User.objects.all().order_by('register_time')
         return_data = {
             "users": [
-                return_field(user.serialize(), ["user_id", "name", "register_time"]) 
+                return_field(user.serialize(), ["user_id", "name", "avatar"]) 
             for user in users],
         }
         return request_success(return_data)

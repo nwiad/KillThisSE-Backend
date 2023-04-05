@@ -23,8 +23,7 @@ def CheckLogin(check_fn):
     @wraps(check_fn)
     def decorated(*args, **kwargs):
         req = args[1]
-        body = json.loads(req.body.decode("utf-8"))
-        if verify_session_id(get_session_id(body)):
+        if verify_session_id(get_session_id(req)):
             return check_fn(*args, **kwargs)
         else:
             return request_failed(1, "Not logged in", 400)
