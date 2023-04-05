@@ -4,8 +4,8 @@ from IMBackend.settings import TIME_ZONE
 
 from user.models import User, SessionPool
 
-def get_session_id(body):
-    return body.get('sessionId')
+def get_session_id(req):
+    return req.cookie
 
 
 def bind_session_id(sessionId: str, user: User):

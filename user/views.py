@@ -37,15 +37,14 @@ class UserViewSet(viewsets.ViewSet):
         else: # Successful Create
             user = User(name=name, password=m_password)
             user.save()
-            bind_session_id(get_session_id(body), user)
+            bind_session_id(get_session_id(req), user)
 
         return request_success({"Created": True})
         
     @CheckRequire
     @action(detail=False, methods=["POST"])
     def cancel_account(self, req: HttpRequest):
-        body = json.loads(req.body.decode("utf-8"))
-        user = verify_session_id(get_session_id(body))
+        user = verify_session_id(req)
         if not user:
             return request_failed(1, "Not logged in")
 
@@ -56,7 +55,7 @@ class UserViewSet(viewsets.ViewSet):
     def login(self, req: HttpRequest):
         body = json.loads(req.body.decode("utf-8"))
 
-        if verify_session_id(get_session_id(body)):
+        if verify_session_id(get_session_id(req)):
             return request_failed(4, "Already logged in")
 
         name, password = check_for_user_data(body)
@@ -66,7 +65,7 @@ class UserViewSet(viewsets.ViewSet):
             if user and user.name == name:
                 if check_password(password, user.password): # Password in database is encrypted
                     # Successful Login
-                    bind_session_id(get_session_id(body), user)
+                    bind_session_id(get_session_id(req), user)
                     return request_success({"Logged in": True})
                 else:
                     return request_failed(3, "Wrong password")
@@ -79,8 +78,7 @@ class UserViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def logout(self, req: HttpRequest):
-        body = json.loads(req.body.decode("utf-8"))
-        disable_session_id(get_session_id(body))
+        disable_session_id(get_session_id(req))
         return request_success({'Logged out': True})
 
         
@@ -89,7 +87,7 @@ class UserViewSet(viewsets.ViewSet):
     @CheckLogin
     def modify(self, req: HttpRequest):
         body = json.loads(req.body.decode("utf-8"))
-        user = verify_session_id(get_session_id(body))
+        user = verify_session_id(get_session_id(req))
         new_name = body.get('name')
         new_password = body.get('password')
         new_avatar = body.get('avatar')
@@ -120,7 +118,7 @@ class UserViewSet(viewsets.ViewSet):
     @CheckLogin
     def send_friend_request(self, req: HttpRequest):
         body = json.loads(req.body.decode("utf-8"))
-        user = verify_session_id(get_session_id(body))
+        user = verify_session_id(get_session_id(req))
 
         friend_user_id = body.get('friend_user_id')
         friend = User.objects.filter(user_id=friend_user_id).first()
@@ -146,7 +144,7 @@ class UserViewSet(viewsets.ViewSet):
     @CheckLogin
     def respond_friend_request(self, req: HttpRequest):
         body = json.loads(req.body.decode("utf-8"))
-        user = verify_session_id(get_session_id(body))
+        user = verify_session_id(get_session_id(req))
 
         friend_user_id = body.get('friend_user_id')
         friend = User.objects.filter(user_id=friend_user_id)
