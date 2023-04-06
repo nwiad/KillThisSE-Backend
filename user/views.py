@@ -44,13 +44,17 @@ class UserViewSet(viewsets.ViewSet):
         
     @CheckRequire
     @action(detail=False, methods=["POST"])
+    @CheckLogin
     def cancel_account(self, req: HttpRequest):
         user = verify_session_id(get_session_id(req))
+        print("HI")
         
         if not user:
-            return request_failed(1, "Not logged in")
+            return request_failed(1, "Not logged in", 400)
 
         user.delete()
+        return request_success({"Deleted": True})
+
         
     @CheckRequire
     @action(detail=False, methods=["POST"])

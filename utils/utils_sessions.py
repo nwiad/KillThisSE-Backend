@@ -22,7 +22,7 @@ def disable_session_id(sessionId: str):
         
 
 def verify_session_id(sessionId):
-    sessionRecord = SessionPool.objects.get(sessionId=sessionId)
+    sessionRecord = SessionPool.objects.filter(sessionId=sessionId).first()
     if sessionRecord:
         if sessionRecord.expireAt < datetime.datetime.now(pytz.timezone(TIME_ZONE)):
             SessionPool.objects.get(sessionId=sessionId).delete()
