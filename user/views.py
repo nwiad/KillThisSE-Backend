@@ -21,7 +21,6 @@ def check_for_user_data(body):
     return name, password
 
 class UserViewSet(viewsets.ViewSet):
-    @CheckRequire
     @action(detail=False, methods=["POST"])
     def register(self, req: HttpRequest):
         body = json.loads(req.body.decode("utf-8"))
@@ -41,8 +40,8 @@ class UserViewSet(viewsets.ViewSet):
             # bind_session_id(get_session_id(req), user)
 
         return request_success({"Created": True})
-        
-    @CheckRequire
+
+
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def cancel_account(self, req: HttpRequest):
@@ -56,7 +55,6 @@ class UserViewSet(viewsets.ViewSet):
         return request_success({"Deleted": True})
 
         
-    @CheckRequire
     @action(detail=False, methods=["POST"])
     def login(self, req: HttpRequest):
         body = json.loads(req.body.decode("utf-8"))
@@ -79,8 +77,8 @@ class UserViewSet(viewsets.ViewSet):
                 return request_failed(2, "User does not exist")
         else:
             return request_failed(1, "Illegal username")
+        
             
-    @CheckRequire
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def logout(self, req: HttpRequest):
@@ -88,7 +86,6 @@ class UserViewSet(viewsets.ViewSet):
         return request_success({'Logged out': True})
 
         
-    @CheckRequire
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def modify(self, req: HttpRequest):
@@ -118,8 +115,25 @@ class UserViewSet(viewsets.ViewSet):
         user.save()
         return request_success({"Modified": True})
     
+
+    @action(detail=False, methods=["GET"])
+    @CheckLogin
+    def get_friend_requests(self, req: HttpRequest):
+        user = verify_session_id(get_session_id(req))
+
+        request_list = FriendshipRequest.objects.filter(friend_user_id=user.user_id)
+        friend_id_list = [request.user_id for request in request_list]
+        friend_list = [User.objects.filter(user_id=friend_id).first() for friend_id in friend_id_list]
+        
+        return_data = {
+            "requests": [
+                return_field(friend.serialize(), ["user_id", "name", "avatar"])
+            for friend in friend_list
+            ]
+        }
+        return request_success(return_data)
+
     
-    @CheckRequire
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def send_friend_request(self, req: HttpRequest):
@@ -145,7 +159,6 @@ class UserViewSet(viewsets.ViewSet):
         return request_success({"Send request": True})
 
     
-    @CheckRequire
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def respond_friend_request(self, req: HttpRequest):
@@ -167,9 +180,28 @@ class UserViewSet(viewsets.ViewSet):
             requestExists(friend, user).delete()
             return request_success({"Become Friends": False})
         
+
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def del_friend(self, req:HttpRequest):
+        user = verify_session_id(get_session_id(req))
+        body = json.loads(req.body.decode("utf-8"))
+        friend_id = body.get('friend_user_id')
+        friend = User.objects.filter(user_id=friend_id)
+
+        if not friend:
+            return request_failed(2, "Friend not exist")
+        
+        friendship = Friendship.objects.filter(user_id=user.user_id, friend_user_id=friend_id).first()
+        if not friendship:
+            return request_failed(3, "Not your friend")
+        
+        Friendship.objects.filter(user_id=user.user_id, friend_user_id=friend_id).delete()
+        Friendship.objects.filter(user_id=friend_id, friend_user_id=user.user_id).delete()
+        return request_success({"Deleted": True})
+        
     
-    @CheckRequire
-    @action(detail=False, methods=['GET'])
+    @action(detail=False, methods=["GET"])
     @CheckLogin
     def get_profile(self, req:HttpRequest):
         user = verify_session_id(get_session_id(req))
@@ -177,15 +209,52 @@ class UserViewSet(viewsets.ViewSet):
         return_data = return_field(user.serialize(), ["user_id", "name", "avatar"])
         return request_success(return_data)
     
+    
+    @action(detail=False, methods=["GET"])
+    @CheckLogin
+    def search_by_id(self, req:HttpRequest):
+        body = json.loads(req.body.decode("utf-8"))
+        friend_user_id = body.get('friend_user_id')
+        friend = User.objects.filter(user_id=friend_user_id).first()
 
-    @CheckRequire
+        if not friend:
+            return request_failed(2, "Friend not exist")
+        
+        return_data = return_field(friend.serialize(), ["user_id", "name", "avatar"])
+        return request_success(return_data)
+    
+
+    @action(detail=False, methods=["GET"])
+    @CheckLogin
+    def search_by_name(self, req:HttpRequest):
+        body = json.loads(req.body.decode("utf-8"))
+        friend_name = body.get('friend_name')
+        friend = User.objects.filter(name=friend_name).first()
+
+        if not friend:
+            return request_failed(2, "Friend not exist")
+        
+        return_data = return_field(friend.serialize(), ["user_id", "name", "avatar"])
+        return request_success(return_data)
+    
+
     @action(detail=False, methods=["GET"])
     @CheckLogin
     def get_friends(self, req:HttpRequest):
         user = verify_session_id(get_session_id(req))
+        friendship_list = Friendship.objects.filter(user_id=user.user_id)
+        friend_id_list = [friendship.friend_user_id for friendship in friendship_list]
+        friend_list = [User.objects.filter(user_id=friend_id).first() for friend_id in friend_id_list]
+
+        return_data = {
+            "friends": [
+                return_field(friend.serialize(), ["user_id", "name", "avatar"])
+            for friend in friend_list
+            ]
+        }
+        return request_success(return_data)
         
 
-    @CheckRequire
     @action(detail=False, methods=["GET"])
     def users(self, req: HttpRequest):
         users = User.objects.all().order_by('register_time')
