@@ -137,7 +137,7 @@ class UserViewSet(viewsets.ViewSet):
         if requestExists(user, friend):
             return request_failed(3, "Request already exists")
         elif requestExists(friend, user): 
-            addFriends(user, friend)
+            addFriends(user, friend) # add friends directly ??
             requestExists(friend, user).delete()
             return request_success({"Become Friends": True})
         
@@ -157,6 +157,8 @@ class UserViewSet(viewsets.ViewSet):
         if not friend:
             return request_failed(1, "Friend not exist")
         
+        if not requestExists(friend, user):
+            return request_failed(2, "Friend request doesn't exist")
         response = body.get('response')
 
         if response == "accept":
@@ -166,6 +168,7 @@ class UserViewSet(viewsets.ViewSet):
         elif response == "reject":
             requestExists(friend, user).delete()
             return request_success({"Become Friends": False})
+
         
     
     @CheckRequire
