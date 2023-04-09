@@ -88,33 +88,54 @@ class UserViewSet(viewsets.ViewSet):
         
     @action(detail=False, methods=["POST"])
     @CheckLogin
-    def modify(self, req: HttpRequest):
+    def reset_name(self, req: HttpRequest):
         body = json.loads(req.body.decode("utf-8"))
         user = verify_session_id(get_session_id(req))
         new_name = body.get('name')
-        new_password = body.get('password')
-        new_avatar = body.get('avatar')
 
-        if new_name:
-            if not name_valid(new_name):
-                return request_failed(1, "Illegal username")
-            elif name_exist(new_name):
-                return request_failed(2, "Username already exists")
-            else:
-                user.name = new_name
-        
-        if new_password:
-            if not password_valid(new_password):
-                return request_failed(3, "Illegal password")
-            else :
-                user.password = new_password
-
-        if new_avatar:
-            user.avatar = new_avatar
+        if not name_valid(new_name):
+            return request_failed(2, "Illegal username")
+        elif name_exist(new_name):
+            return request_failed(3, "Username already exists")
+        else:
+            user.name = new_name
 
         user.save()
         return request_success({"Modified": True})
     
+
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def reset_password(self, req: HttpRequest):
+        body = json.loads(req.body.decode("utf-8"))
+        user = verify_session_id(get_session_id(req))
+        old_password = body.get('old_pwd')
+        new_password = body.get('new_pwd')
+
+        if not check_password(old_password, user.password):
+            return request_failed(2, "Wrong old password")
+
+        if not password_valid(new_password):
+            return request_failed(2, "Illegal password")
+        else:
+            user.password = make_password(new_password)
+        
+        user.save()
+        return request_success({"Modified": True})
+    
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def reset_avatar(self, req: HttpRequest):
+        body = json.loads(req.body.decode("utf-8"))
+        user = verify_session_id(get_session_id(req))
+        new_avatar = body.get('avatar')
+
+        user.avatar = new_avatar
+        
+        user.save()
+        return request_success({"Modified": True})
+
 
     @action(detail=False, methods=["GET"])
     @CheckLogin
@@ -151,7 +172,7 @@ class UserViewSet(viewsets.ViewSet):
         if requestExists(user, friend):
             return request_failed(3, "Request already exists")
         elif requestExists(friend, user): 
-            addFriends(user, friend) # add friends directly ??
+            addFriends(user, friend)
             requestExists(friend, user).delete()
             return request_success({"Become Friends": True})
         
@@ -183,10 +204,9 @@ class UserViewSet(viewsets.ViewSet):
             return request_success({"Become Friends": False})
 
         
-
     @action(detail=False, methods=["POST"])
     @CheckLogin
-    def del_friend(self, req:HttpRequest):
+    def del_friend(self, req: HttpRequest):
         user = verify_session_id(get_session_id(req))
         body = json.loads(req.body.decode("utf-8"))
         friend_id = body.get('friend_user_id')
@@ -206,7 +226,7 @@ class UserViewSet(viewsets.ViewSet):
     
     @action(detail=False, methods=["GET"])
     @CheckLogin
-    def get_profile(self, req:HttpRequest):
+    def get_profile(self, req: HttpRequest):
         user = verify_session_id(get_session_id(req))
 
         return_data = return_field(user.serialize(), ["user_id", "name", "avatar"])
@@ -215,7 +235,7 @@ class UserViewSet(viewsets.ViewSet):
     
     @action(detail=False, methods=["GET"])
     @CheckLogin
-    def search_by_id(self, req:HttpRequest):
+    def search_by_id(self, req: HttpRequest):
         body = json.loads(req.body.decode("utf-8"))
         friend_user_id = body.get('friend_user_id')
         friend = User.objects.filter(user_id=friend_user_id).first()
@@ -229,7 +249,7 @@ class UserViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["GET"])
     @CheckLogin
-    def search_by_name(self, req:HttpRequest):
+    def search_by_name(self, req: HttpRequest):
         body = json.loads(req.body.decode("utf-8"))
         friend_name = body.get('friend_name')
         friend = User.objects.filter(name=friend_name).first()
@@ -243,7 +263,7 @@ class UserViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["GET"])
     @CheckLogin
-    def get_friends(self, req:HttpRequest):
+    def get_friends(self, req: HttpRequest):
         user = verify_session_id(get_session_id(req))
         friendship_list = Friendship.objects.filter(user_id=user.user_id)
         friend_id_list = [friendship.friend_user_id for friendship in friendship_list]
@@ -256,7 +276,46 @@ class UserViewSet(viewsets.ViewSet):
             ]
         }
         return request_success(return_data)
+    
+
+    @action(detail=False, methods=["GET"])
+    @CheckLogin
+    def search_friend_by_id(self, req: HttpRequest):
+        user = verify_session_id(get_session_id(req))
+        body = json.loads(req.body.decode("utf-8"))
+        friend_id = body.get('friend_id')
+
+        friendship = Friendship.objects.filter(user_id=user.user_id, friend_user_id=friend_id)
+        if not friendship:
+            return request_failed(2, "Friend not exist")
+        else:
+            friend = User.objects.filter(user_id=friend_id).first()
+
+        return_data = return_field(friend.serialize(), ["user_id", "name", "avatar"])
+
+        return request_success(return_data)
+
         
+    @action(detail=False, methods=["GET"])
+    @CheckLogin
+    def search_friend_by_name(self, req: HttpRequest):
+        user = verify_session_id(get_session_id(req))
+        body = json.loads(req.body.decode("utf-8"))
+        friend_name = body.get('friend_name')
+
+        friend = User.objects.filter(name=friend_name).first()
+        if not friend:
+            return request_failed(2, "Friend not exist")
+        
+        friend_id = friend.user_id
+        friendship = Friendship.objects.filter(user_id=user.user_id, friend_user_id=friend_id)
+        if not friendship:
+            return request_failed(2, "Friend not exist")
+
+        return_data = return_field(friend.serialize(), ["user_id", "name", "avatar"])
+
+        return request_success(return_data)
+
 
     @action(detail=False, methods=["GET"])
     def users(self, req: HttpRequest):
