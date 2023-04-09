@@ -7,7 +7,7 @@ from IMBackend.settings import TIME_ZONE
 from user.models import User, SessionPool
 
 def get_session_id(req: HttpRequest):
-    
+
     return req.COOKIES.get('session')
 
 

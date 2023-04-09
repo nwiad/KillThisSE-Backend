@@ -116,7 +116,7 @@ class UserViewSet(viewsets.ViewSet):
             return request_failed(2, "Wrong old password")
 
         if not password_valid(new_password):
-            return request_failed(2, "Illegal password")
+            return request_failed(3, "Illegal password")
         else:
             user.password = make_password(new_password)
         
