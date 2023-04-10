@@ -316,7 +316,7 @@ class UserViewTests(TestCase):
         self.assertEqual(user.avatar, "newavatar")
     
     
-#! friend
+#! friend add
     # send_friend_request
     def test_send_friend_request(self):
         # 创建两个新用户并登录1
@@ -478,7 +478,7 @@ class UserViewTests(TestCase):
         # self.assertEqual(response.status_code, 401)
         # self.assertEqual(response.json(), {"error_code": 1, "error_message": "Invalid session ID"})
 
-    # respond_friend_request
+    # respond_friend_request  ok
     def test_respond_friend_request(self):
         # 创建两个新用户
         request_data = {
@@ -518,7 +518,6 @@ class UserViewTests(TestCase):
         request_sent = requestExists(user1, user2)
         self.assertTrue(request_sent)
 
-        
         # 登出
         response = self.client.post(reverse('user-logout'), format='json')
         self.assertEqual(response.status_code, 200)
@@ -551,6 +550,167 @@ class UserViewTests(TestCase):
         are_friends = isFriend(user1, user2)
         self.assertTrue(are_friends)
     
+    # respond_friend_request  no
+    def test_respond_friend_request(self):
+        # 创建两个新用户
+        request_data = {
+            "name": "testuser11",
+            "password": "newpassword11"
+        }
+        response = self.client.post(reverse("user-register"), data=request_data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        
+        request_data = {
+            "name": "testuser22",
+            "password": "newpassword22"
+        }
+        response = self.client.post(reverse("user-register"), data=request_data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+
+        # 登录第一个用户
+        login_data = {'name': 'testuser11', 'password': 'newpassword11'}
+        response = self.client.post('/user/login/', json.dumps(login_data), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        response_content = json.loads(response.content)
+        self.assertEqual(response_content, {'code': 0, 'info': 'Succeed', "Logged in": True})
+        
+        # 获取用户对象
+        user1 = User.objects.get(name='testuser11')
+        user2 = User.objects.get(name='testuser22')
+
+        # 发送好友请求
+        response = self.client.post(
+            "/user/send_friend_request/", 
+            {"friend_user_id": user2.user_id},
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 200)
+
+        # 检查好友请求是否已发送  参数1 向参数2发送的请求存在
+        request_sent = requestExists(user1, user2)
+        self.assertTrue(request_sent)
+
+        # 登出
+        response = self.client.post(reverse('user-logout'), format='json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'code': 0, 'info': 'Succeed', 'Logged out': True})
+
+        # 清除session 登录另一个用户需要换session！
+        self.client.cookies['session'] = 'session_value2'
+        
+        # 登录第二个用户
+        login_data = {'name': 'testuser22', 'password': 'newpassword22'}
+        response = self.client.post('/user/login/', json.dumps(login_data), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        response_content = json.loads(response.content)
+        self.assertEqual(response_content, {'code': 0, 'info': 'Succeed', "Logged in": True})
+        
+        # 接受好友请求
+        response = self.client.post(
+            "/user/respond_friend_request/",
+            {
+                "friend_user_id": user1.user_id, 
+                "response": "reject"
+                },
+            content_type='application/json'
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'code': 0, 'info': 'Succeed', 'Become Friends': False})
+
+        # 检查用户是否已成为好友
+        are_friends = isFriend(user1, user2)
+        self.assertFalse(are_friends)
+    
+    
+#! friend del
+    def test_del_friend(self):
+        # 创建测试用户和好友
+        user = User.objects.create(name="test_user", password=make_password("password"))
+        friend = User.objects.create(name="test_friend", password=make_password("password"))
+        
+        # 创建好友关系
+        addFriends(user, friend)
+        
+        # 登录user 
+        login_data = {'name': 'test_user', 'password': 'password'}
+        response = self.client.post('/user/login/', json.dumps(login_data), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        response_content = json.loads(response.content)
+        self.assertEqual(response_content, {'code': 0, 'info': 'Succeed', "Logged in": True})
+        
+        # 模拟请求
+        data={'friend_user_id': friend.user_id}
+        response = self.client.post('/user/del_friend/', data=data, content_type='application/json')
+  
+        # 断言响应状态码和内容
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'code': 0, 'info': 'Succeed', 'Deleted': True})
+        
+        # 确认好友关系已删除
+        are_friends = isFriend(user, friend)
+        self.assertFalse(are_friends)
+        
+        user.delete()
+        friend.delete()
+
+
+    def test_get_profile(self):
+        # 创建测试用户
+        user = User.objects.create(name="test_user", password=make_password("password"))
+        # 登录user 
+        login_data = {'name': 'test_user', 'password': 'password'}
+        response = self.client.post('/user/login/', json.dumps(login_data), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        response_content = json.loads(response.content)
+        self.assertEqual(response_content, {'code': 0, 'info': 'Succeed', "Logged in": True})
+        
+        # 模拟请求
+        response = self.client.get('/user/get_profile/', content_type='application/json')
+  
+        # 断言响应状态码和内容
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {
+            "code": 0,
+            "info": "Succeed",
+            "user_id": user.user_id,
+            "name": user.name,
+            "avatar": user.avatar
+        })
+        
+        # 删除测试用户
+        user.delete()
+
+#! 全局搜索 
+    # by id
+    def test_search_by_id(self):
+        # 创建测试用户
+        user = User.objects.create(name="test_user", password=make_password("password"))
+        
+        # 登录user 
+        login_data = {'name': 'test_user', 'password': 'password'}
+        response = self.client.post('/user/login/', json.dumps(login_data), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        response_content = json.loads(response.content)
+        self.assertEqual(response_content, {'code': 0, 'info': 'Succeed', "Logged in": True})
+        
+        # 模拟请求
+        data={
+            'friend_user_id': user.user_id,
+        }
+        response = self.client.get('/user/search_by_id/', data=data, content_type='application/json')
+
+        # 断言响应状态码和内容
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {
+            "code": 0,
+            "message": "success",
+        })
+        
+        # 删除测试用户
+        user.delete()
+
+
     # users
     def test_users(self):
         # 创建两个用户
