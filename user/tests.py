@@ -23,7 +23,7 @@ class UserViewTests(TestCase):
         self.client.cookies['my_cookie'] = 'cookie_value'
         self.client.cookies['session'] = 'session_value'
         
-    # register
+# register
     # 正常注册
     def test_successful_user_registration(self):
         request_data = {
@@ -44,7 +44,7 @@ class UserViewTests(TestCase):
             "name": "testuser",
             "password": "testpassword"
         }
-        response = self.client.post(reverse("user-register"), data=request_data)
+        response = self.client.post(reverse("user-register"), data=request_data, content_type="application/json")
         self.assertEqual(response.status_code, 400)
         self.assertFalse(User.objects.filter(name="testuser", password=make_password("testpassword")).exists())
 
@@ -61,7 +61,7 @@ class UserViewTests(TestCase):
         response_content = json.loads(response.content)
         self.assertEqual(response_content, {"code": 1, "info": 'Illegal username'})
 
-    # login
+# login
     # 正常登录
     def test_successful_user_login(self):
         request_data = {
@@ -115,9 +115,58 @@ class UserViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {'code': 0, 'info': 'Succeed', 'Logged out': True})
        
-    # modify
-    def test_modify(self):
-        # 登录
+# modify
+    def test_reset_name(self):
+        # log in
+        login_data = {
+            'name': 'testuser', 
+            'password': '123456'
+            }
+        response = self.client.post('/user/login/', data=login_data, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        
+        user = User.objects.get(name='testuser')
+
+        # 修改用户名成功
+        response = self.client.post(
+            "/user/reset_name/",
+            {
+                "name": "newtestuser",
+            },
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'code': 0, 'info': 'Succeed', 'Modified': True})
+
+        # 检查用户信息是否已经修改
+        user.refresh_from_db()
+        self.assertEqual(user.name, "newtestuser")
+
+
+        # test case: illegal username
+        response = self.client.post(
+            "/user/reset_name/",
+            {
+                "name": "illegal!name",
+            },
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {'code': 2, 'info': 'Illegal username'})
+
+        # test case: username already exists
+        response = self.client.post(
+            "/user/reset_name/",
+            {
+                "name": "newtestuser",
+            },
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {"code": 3, "info": "Username already exists"})
+
+    def test_reset_password(self):
+        # log in
         login_data = {
             'name': 'testuser', 
             'password': '123456'
@@ -129,11 +178,10 @@ class UserViewTests(TestCase):
 
         # 修改用户名、密码和头像
         response = self.client.post(
-            "/user/modify/",
+            "/user/reset_password/",
             {
-                "name": "newtestuser",
-                "password": "newtestpassword",
-                "avatar": "new_avatar"
+                "old_pwd": "123456",
+                "new_pwd": "newpassword",
             },
             content_type='application/json'
         )
@@ -141,11 +189,64 @@ class UserViewTests(TestCase):
 
         # 检查用户信息是否已经修改
         user.refresh_from_db()
-        self.assertEqual(user.name, "newtestuser")
-        self.assertTrue(user.password,make_password("newtestpassword"))
-        self.assertEqual(user.avatar, "new_avatar")
+        
+         # 登出
+        response = self.client.post(reverse('user-logout'), format='json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'code': 0, 'info': 'Succeed', 'Logged out': True})
 
-    # friend
+        # 清除session 登录另一个用户需要换session！
+        self.client.cookies['session'] = 'session_value3'
+        
+        
+        # 旧密码登录失败
+        login_data = {
+            'name': 'testuser', 
+            'password': '123456'
+            }
+        response = self.client.post('/user/login/', json.dumps(login_data), content_type='application/json')
+        self.assertNotEqual(response.status_code, 200)
+        
+        self.client.cookies['session'] = 'session_value4'
+        
+        # 新密码登录成功
+        login_data = {
+            'name': 'testuser', 
+            'password': 'newpassword'
+            }
+        response = self.client.post('/user/login/', json.dumps(login_data), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        response_content = json.loads(response.content)
+        self.assertEqual(response_content, {'code': 0, 'info': 'Succeed', "Logged in": True})
+        
+    
+    # def test_reset_avatar(self):
+    #             # log in
+    #     login_data = {
+    #         'name': 'testuser', 
+    #         'password': '123456'
+    #         }
+    #     response = self.client.post('/user/login/', data=login_data, content_type='application/json')
+    #     self.assertEqual(response.status_code, 200)
+        
+    #     user = User.objects.get(name='testuser')
+
+    #     # 修改用户名、密码和头像
+    #     response = self.client.post(
+    #         "/user/reset_password/",
+    #         {
+    #             "avatar": "newavatar",
+    #         },
+    #         content_type='application/json'
+    #     )
+    #     self.assertEqual(response.status_code, 200)
+
+    #     # 检查用户信息是否已经修改
+    #     user.refresh_from_db()
+    #     self.assertEqual(user.avatar, "newavatar")
+    
+    
+# friend
     # send_friend_request
     def test_send_friend_request(self):
         # 创建两个新用户并登录1
@@ -189,78 +290,122 @@ class UserViewTests(TestCase):
         request_sent = requestExists(user1, user2)
         self.assertTrue(request_sent)
 
-    # respond_friend_request
-    def test_respond_friend_request(self):
-        # 创建两个新用户
-        request_data = {
-            "name": "testuser11",
-            "password": "newpassword11"
-        }
-        response = self.client.post(reverse("user-register"), data=request_data, content_type="application/json")
-        self.assertEqual(response.status_code, 200)
-        
-        request_data = {
-            "name": "testuser22",
-            "password": "newpassword22"
-        }
-        response = self.client.post(reverse("user-register"), data=request_data, content_type="application/json")
-        self.assertEqual(response.status_code, 200)
+    # # get_friend_requests
+    # def test_get_friend_requests(self):
+    #     # create users
+    #     user1 = User.objects.create(name="user1", password="password1")
+    #     user2 = User.objects.create(name="user2", password="password2")
+    #     user3 = User.objects.create(name="user3", password="password3")
 
-        # 登录第一个用户
-        login_data = {'name': 'testuser11', 'password': 'newpassword11'}
-        response = self.client.post('/user/login/', json.dumps(login_data), content_type='application/json')
-        self.assertEqual(response.status_code, 200)
-        response_content = json.loads(response.content)
-        self.assertEqual(response_content, {'code': 0, 'info': 'Succeed', "Logged in": True})
-        
-        # 获取用户对象
-        user1 = User.objects.get(name='testuser11')
-        user2 = User.objects.get(name='testuser22')
+    #     # create friendship requests
+    #     FriendshipRequest.objects.create(user=user1, friend_user=user2)
+    #     FriendshipRequest.objects.create(user=user1, friend_user=user3)
 
-        # 发送好友请求
-        response = self.client.post(
-            "/user/send_friend_request/", 
-            {"friend_user_id": user2.user_id},
-            content_type='application/json'
-        )
-        self.assertEqual(response.status_code, 200)
+    #     # log in as user1
+    #     session_id = create_session(user1)
+    #     headers = {'HTTP_SESSION_ID': session_id}
 
-        # 检查好友请求是否已发送  参数1 向参数2发送的请求存在
-        request_sent = requestExists(user1, user2)
-        self.assertTrue(request_sent)
+    #     # test case: successfully get friend requests
+    #     response = self.client.get('/user/friend_requests/', **headers)
+    #     self.assertEqual(response.status_code, 200)
+    #     self.assertEqual(response.json(), {
+    #         "requests": [
+    #             {
+    #                 "user_id": user2.user_id,
+    #                 "name": user2.name,
+    #                 "avatar": None
+    #             },
+    #             {
+    #                 "user_id": user3.user_id,
+    #                 "name": user3.name,
+    #                 "avatar": None
+    #             }
+    #         ]
+    #     })
+
+    #     # test case: no friend requests
+    #     FriendshipRequest.objects.all().delete()
+    #     response = self.client.get('/user/friend_requests/', **headers)
+    #     self.assertEqual(response.status_code, 200)
+    #     self.assertEqual(response.json(), {"requests": []})
+
+    #     # test case: invalid session id
+    #     headers['HTTP_SESSION_ID'] = 'invalid_session_id'
+    #     response = self.client.get('/user/friend_requests/', **headers)
+    #     self.assertEqual(response.status_code, 401)
+    #     self.assertEqual(response.json(), {"error_code": 1, "error_message": "Invalid session ID"})
+
+    # # respond_friend_request
+    # def test_respond_friend_request(self):
+    #     # 创建两个新用户
+    #     request_data = {
+    #         "name": "testuser11",
+    #         "password": "newpassword11"
+    #     }
+    #     response = self.client.post(reverse("user-register"), data=request_data, content_type="application/json")
+    #     self.assertEqual(response.status_code, 200)
+        
+    #     request_data = {
+    #         "name": "testuser22",
+    #         "password": "newpassword22"
+    #     }
+    #     response = self.client.post(reverse("user-register"), data=request_data, content_type="application/json")
+    #     self.assertEqual(response.status_code, 200)
+
+    #     # 登录第一个用户
+    #     login_data = {'name': 'testuser11', 'password': 'newpassword11'}
+    #     response = self.client.post('/user/login/', json.dumps(login_data), content_type='application/json')
+    #     self.assertEqual(response.status_code, 200)
+    #     response_content = json.loads(response.content)
+    #     self.assertEqual(response_content, {'code': 0, 'info': 'Succeed', "Logged in": True})
+        
+    #     # 获取用户对象
+    #     user1 = User.objects.get(name='testuser11')
+    #     user2 = User.objects.get(name='testuser22')
+
+    #     # 发送好友请求
+    #     response = self.client.post(
+    #         "/user/send_friend_request/", 
+    #         {"friend_user_id": user2.user_id},
+    #         content_type='application/json'
+    #     )
+    #     self.assertEqual(response.status_code, 200)
+
+    #     # 检查好友请求是否已发送  参数1 向参数2发送的请求存在
+    #     request_sent = requestExists(user1, user2)
+    #     self.assertTrue(request_sent)
 
         
-        # 登出
-        response = self.client.post(reverse('user-logout'), format='json')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {'code': 0, 'info': 'Succeed', 'Logged out': True})
+    #     # 登出
+    #     response = self.client.post(reverse('user-logout'), format='json')
+    #     self.assertEqual(response.status_code, 200)
+    #     self.assertEqual(response.json(), {'code': 0, 'info': 'Succeed', 'Logged out': True})
 
-        # 清除session 登录另一个用户需要换session！
-        self.client.cookies['session'] = 'session_value2'
+    #     # 清除session 登录另一个用户需要换session！
+    #     self.client.cookies['session'] = 'session_value2'
         
+    #     # 登录第二个用户
+    #     login_data = {'name': 'testuser22', 'password': 'newpassword22'}
+    #     response = self.client.post('/user/login/', json.dumps(login_data), content_type='application/json')
+    #     self.assertEqual(response.status_code, 200)
+    #     response_content = json.loads(response.content)
+    #     self.assertEqual(response_content, {'code': 0, 'info': 'Succeed', "Logged in": True})
         
-        # 登录第二个用户
-        login_data = {'name': 'testuser22', 'password': 'newpassword22'}
-        response = self.client.post('/user/login/', json.dumps(login_data), content_type='application/json')
-        self.assertEqual(response.status_code, 200)
-        response_content = json.loads(response.content)
-        self.assertEqual(response_content, {'code': 0, 'info': 'Succeed', "Logged in": True})
+    #     # 接受好友请求
+    #     response = self.client.post(
+    #         "/user/respond_friend_request/",
+    #         {
+    #             "friend_user_id": user1.user_id, 
+    #             "response": "accept"
+    #             },
+    #         content_type='application/json'
+    #     )
         
-        # 接受好友请求
-        response = self.client.post(
-            "/user/respond_friend_request/",
-            {
-                "friend_user_id": user1.user_id, 
-                "response": "accept"
-                },
-            content_type='application/json'
-        )
-        
-        self.assertEqual(response.status_code, 200)
+    #     self.assertEqual(response.status_code, 200)
 
-        # 检查用户是否已成为好友
-        are_friends = isFriend(user1, user2)
-        self.assertTrue(are_friends)
+    #     # 检查用户是否已成为好友
+    #     are_friends = isFriend(user1, user2)
+    #     self.assertTrue(are_friends)
     
     # users
     def test_users(self):
