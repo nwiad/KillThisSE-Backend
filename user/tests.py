@@ -289,30 +289,31 @@ class UserViewTests(TestCase):
         self.assertEqual(response_content, {'code': 0, 'info': 'Succeed', "Logged in": True})
         
     #todo: reset avatar
-    # def test_reset_avatar(self):
-    #             # log in
-    #     login_data = {
-    #         'name': 'testuser', 
-    #         'password': '12345678'
-    #         }
-    #     response = self.client.post('/user/login/', data=login_data, content_type='application/json')
-    #     self.assertEqual(response.status_code, 200)
+    def test_reset_avatar(self):
+                # log in
+        login_data = {
+            'name': 'testuser', 
+            'password': '12345678'
+            }
+        response = self.client.post('/user/login/', data=login_data, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
         
-    #     user = User.objects.get(name='testuser')
+        user = User.objects.get(name='testuser')
 
-    #     # 修改用户名、密码和头像
-    #     response = self.client.post(
-    #         "/user/reset_password/",
-    #         {
-    #             "avatar": "newavatar",
-    #         },
-    #         content_type='application/json'
-    #     )
-    #     self.assertEqual(response.status_code, 200)
+        # 修改头像
+        response = self.client.post(
+            "/user/reset_avatar/",
+            {
+                "avatar": "newavatar",
+            },
+            content_type='application/json'
+        )
+        self.assertEqual(response.json(), {'code': 0, 'info': 'Succeed', 'Modified': True})
+        self.assertEqual(response.status_code, 200)
 
-    #     # 检查用户信息是否已经修改
-    #     user.refresh_from_db()
-    #     self.assertEqual(user.avatar, "newavatar")
+        # 检查用户信息是否已经修改
+        user.refresh_from_db()
+        self.assertEqual(user.avatar, "newavatar")
     
     
 #! friend
