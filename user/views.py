@@ -116,7 +116,7 @@ class UserViewSet(viewsets.ViewSet):
             return request_failed(2, "Wrong old password")
 
         if not password_valid(new_password):
-            return request_failed(3, "Illegal password")
+            return request_failed(3, "Illegal new password")
         else:
             user.password = make_password(new_password)
         
@@ -164,7 +164,7 @@ class UserViewSet(viewsets.ViewSet):
         friend_user_id = body.get('friend_user_id')
         friend = User.objects.filter(user_id=friend_user_id).first()
         if not friend:
-            return request_failed(1, "Friend not exist")
+            return request_failed(1, "target Friend not exist")
         
         if isFriend(user, friend):
             return request_failed(2, "Already become friends")
@@ -174,7 +174,7 @@ class UserViewSet(viewsets.ViewSet):
         elif requestExists(friend, user): 
             addFriends(user, friend)
             requestExists(friend, user).delete()
-            return request_success({"Become Friends": True})
+            return request_success({"Become Friends successfully": True})
         
         sendFriendRequest(user, friend)
         return request_success({"Send request": True})
@@ -213,7 +213,7 @@ class UserViewSet(viewsets.ViewSet):
         friend = User.objects.filter(user_id=friend_id)
 
         if not friend:
-            return request_failed(2, "Friend not exist")
+            return request_failed(2, "your Friend not exist")
         
         friendship = Friendship.objects.filter(user_id=user.user_id, friend_user_id=friend_id).first()
         if not friendship:
@@ -241,7 +241,7 @@ class UserViewSet(viewsets.ViewSet):
         friend = User.objects.filter(user_id=friend_user_id).first()
 
         if not friend:
-            return request_failed(2, "Friend not exist")
+            return request_failed(2, "User searched by id not exist")
         
         return_data = return_field(friend.serialize(), ["user_id", "name", "avatar"])
         return request_success(return_data)
@@ -255,7 +255,7 @@ class UserViewSet(viewsets.ViewSet):
         friend = User.objects.filter(name=friend_name).first()
 
         if not friend:
-            return request_failed(2, "Friend not exist")
+            return request_failed(2, "User searched by name not exist")
         
         return_data = return_field(friend.serialize(), ["user_id", "name", "avatar"])
         return request_success(return_data)
@@ -287,7 +287,7 @@ class UserViewSet(viewsets.ViewSet):
 
         friendship = Friendship.objects.filter(user_id=user.user_id, friend_user_id=friend_id)
         if not friendship:
-            return request_failed(2, "Friend not exist")
+            return request_failed(2, "Friend searched by id not exist")
         else:
             friend = User.objects.filter(user_id=friend_id).first()
 
@@ -305,12 +305,12 @@ class UserViewSet(viewsets.ViewSet):
 
         friend = User.objects.filter(name=friend_name).first()
         if not friend:
-            return request_failed(2, "Friend not exist")
+            return request_failed(2, "Friend searched by name not exist")
         
         friend_id = friend.user_id
         friendship = Friendship.objects.filter(user_id=user.user_id, friend_user_id=friend_id)
         if not friendship:
-            return request_failed(2, "Friend not exist")
+            return request_failed(2, "Friend you search not exist")
 
         return_data = return_field(friend.serialize(), ["user_id", "name", "avatar"])
 
