@@ -13,7 +13,7 @@ class UserViewTests(TestCase):
     def setUpTestData(cls):
         cls.user = User.objects.create(
             name = "testuser", 
-            password = make_password("123456")
+            password = make_password("12345678")
             )
     def setUp(self):
         self.factory = RequestFactory()
@@ -66,7 +66,7 @@ class UserViewTests(TestCase):
     def test_successful_user_login(self):
         request_data = {
             "name": "testuser",
-            "password": "123456"
+            "password": "12345678"
             }
         response = self.client.post('/user/login/', data=request_data, content_type='application/json')
         response_content = json.loads(response.content)
@@ -180,7 +180,7 @@ class UserViewTests(TestCase):
         response = self.client.post(
             "/user/reset_password/",
             {
-                "old_pwd": "123456",
+                "old_pwd": "12345678",
                 "new_pwd": "newpassword",
             },
             content_type='application/json'
@@ -290,50 +290,57 @@ class UserViewTests(TestCase):
         request_sent = requestExists(user1, user2)
         self.assertTrue(request_sent)
 
-    # # get_friend_requests
-    # def test_get_friend_requests(self):
-    #     # create users
-    #     user1 = User.objects.create(name="user1", password="password1")
-    #     user2 = User.objects.create(name="user2", password="password2")
-    #     user3 = User.objects.create(name="user3", password="password3")
+    # get_friend_requests
+    def test_get_friend_requests(self):
+        # create users
+        user1 = User.objects.create(name="user1", password=make_password("password1"))
+        user2 = User.objects.create(name="user2", password=make_password("password2"))
+        user3 = User.objects.create(name="user3", password=make_password("password3"))
 
-    #     # create friendship requests
-    #     FriendshipRequest.objects.create(user=user1, friend_user=user2)
-    #     FriendshipRequest.objects.create(user=user1, friend_user=user3)
+        # create friendship requests
+        sendFriendRequest(user1=user1, user2=user2)
+        sendFriendRequest(user1=user1, user2=user3)
+        
 
-    #     # log in as user1
-    #     session_id = create_session(user1)
-    #     headers = {'HTTP_SESSION_ID': session_id}
+        # log in as user1
+        login_data = {
+            'name': 'user1', 
+            'password': 'password1'
+            }
+        response = self.client.post('/user/login/', data=login_data, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        
 
-    #     # test case: successfully get friend requests
-    #     response = self.client.get('/user/friend_requests/', **headers)
-    #     self.assertEqual(response.status_code, 200)
-    #     self.assertEqual(response.json(), {
-    #         "requests": [
-    #             {
-    #                 "user_id": user2.user_id,
-    #                 "name": user2.name,
-    #                 "avatar": None
-    #             },
-    #             {
-    #                 "user_id": user3.user_id,
-    #                 "name": user3.name,
-    #                 "avatar": None
-    #             }
-    #         ]
-    #     })
+        # test case: successfully get friend requests
+        response = self.client.get('/user/friend_requests/')
+        self.assertEqual(response.status_code, 200)
+        
+        self.assertEqual(response.json(), {
+            "requests": [
+                {
+                    "user_id": user2.user_id,
+                    "name": user2.name,
+                    "avatar": None
+                },
+                {
+                    "user_id": user3.user_id,
+                    "name": user3.name,
+                    "avatar": None
+                }
+            ]
+        })
 
-    #     # test case: no friend requests
-    #     FriendshipRequest.objects.all().delete()
-    #     response = self.client.get('/user/friend_requests/', **headers)
-    #     self.assertEqual(response.status_code, 200)
-    #     self.assertEqual(response.json(), {"requests": []})
+        # # test case: no friend requests
+        # FriendshipRequest.objects.all().delete()
+        # response = self.client.get('/user/friend_requests/', **headers)
+        # self.assertEqual(response.status_code, 200)
+        # self.assertEqual(response.json(), {"requests": []})
 
-    #     # test case: invalid session id
-    #     headers['HTTP_SESSION_ID'] = 'invalid_session_id'
-    #     response = self.client.get('/user/friend_requests/', **headers)
-    #     self.assertEqual(response.status_code, 401)
-    #     self.assertEqual(response.json(), {"error_code": 1, "error_message": "Invalid session ID"})
+        # # test case: invalid session id
+        # headers['HTTP_SESSION_ID'] = 'invalid_session_id'
+        # response = self.client.get('/user/friend_requests/', **headers)
+        # self.assertEqual(response.status_code, 401)
+        # self.assertEqual(response.json(), {"error_code": 1, "error_message": "Invalid session ID"})
 
     # # respond_friend_request
     # def test_respond_friend_request(self):
