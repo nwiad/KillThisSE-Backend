@@ -187,7 +187,7 @@ class UserViewSet(viewsets.ViewSet):
         user = verify_session_id(get_session_id(req))
 
         friend_user_id = body.get('friend_user_id')
-        friend = User.objects.filter(user_id=friend_user_id)
+        friend = User.objects.filter(user_id=friend_user_id).first()
         if not friend:
             return request_failed(1, "Friend not exist")
         
