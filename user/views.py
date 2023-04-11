@@ -46,7 +46,6 @@ class UserViewSet(viewsets.ViewSet):
     @CheckLogin
     def cancel_account(self, req: HttpRequest):
         user = verify_session_id(get_session_id(req))
-        print("HI")
         
         if not user:
             return request_failed(1, "Not logged in", 400)
@@ -61,7 +60,6 @@ class UserViewSet(viewsets.ViewSet):
 
         if verify_session_id(get_session_id(req)):
             return request_failed(4, "Already logged in")
-
         name, password = check_for_user_data(body)
 
         if name_valid(name):
@@ -233,7 +231,7 @@ class UserViewSet(viewsets.ViewSet):
         return request_success(return_data)
     
     
-    @action(detail=False, methods=["GET"])
+    @action(detail=False, methods=["POST"])
     @CheckLogin
     def search_by_id(self, req: HttpRequest):
         body = json.loads(req.body.decode("utf-8"))
@@ -247,7 +245,7 @@ class UserViewSet(viewsets.ViewSet):
         return request_success(return_data)
     
 
-    @action(detail=False, methods=["GET"])
+    @action(detail=False, methods=["POST"])
     @CheckLogin
     def search_by_name(self, req: HttpRequest):
         body = json.loads(req.body.decode("utf-8"))
@@ -278,7 +276,7 @@ class UserViewSet(viewsets.ViewSet):
         return request_success(return_data)
     
 
-    @action(detail=False, methods=["GET"])
+    @action(detail=False, methods=["POST"])
     @CheckLogin
     def search_friend_by_id(self, req: HttpRequest):
         user = verify_session_id(get_session_id(req))
@@ -296,7 +294,7 @@ class UserViewSet(viewsets.ViewSet):
         return request_success(return_data)
 
         
-    @action(detail=False, methods=["GET"])
+    @action(detail=False, methods=["POST"])
     @CheckLogin
     def search_friend_by_name(self, req: HttpRequest):
         user = verify_session_id(get_session_id(req))
