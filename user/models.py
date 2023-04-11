@@ -45,7 +45,7 @@ class FriendshipRequest(models.Model):
 
 class SessionPool(models.Model):
     sessionId = models.CharField(max_length=32)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user_id = models.IntegerField(unique=True)
     expireAt = models.DateTimeField(default=get_datetime)
 
     class Mata:

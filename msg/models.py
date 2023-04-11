@@ -15,5 +15,5 @@ class Conversation(models.Model):
 class Message(models.Model):
     msg_id = models.BigAutoField(primary_key=True)
     msg_body = models.CharField(max_length=MAX_CHAR_LENGTH)
-
+    
 

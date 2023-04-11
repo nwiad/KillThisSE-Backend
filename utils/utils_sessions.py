@@ -11,14 +11,13 @@ def get_session_id(req: HttpRequest):
     return req.COOKIES.get('session')
 
 
-def bind_session_id(sessionId: str, user: User):
-    SessionPool.objects.create(sessionId=sessionId, user=user)
+def bind_session_id(sessionId: str, user_id: int):
+    SessionPool.objects.create(sessionId=sessionId, user_id=user_id)
 
 
 def disable_session_id(sessionId: str):
-    record = SessionPool.objects.get(sessionId=sessionId)
-    if record:
-        record.delete()
+    record = SessionPool.objects.filter(sessionId=sessionId)
+    record.delete()
         
 
 def verify_session_id(sessionId):
@@ -30,3 +29,7 @@ def verify_session_id(sessionId):
         return sessionRecord.user
     else:
         return None
+    
+def verify_user(user_id):
+    sessionRecord = SessionPool.objects.filter(user_id=user_id).first()
+    return sessionRecord

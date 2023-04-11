@@ -62,19 +62,20 @@ class UserViewSet(viewsets.ViewSet):
             return request_failed(4, "Already logged in")
         name, password = check_for_user_data(body)
 
-        if name_valid(name):
-            user = name_exist(name)
-            if user and user.name == name:
-                if check_password(password, user.password): # Password in database is encrypted
-                    # Successful Login
-                    bind_session_id(get_session_id(req), user)
-                    return request_success({"Logged in": True})
-                else:
-                    return request_failed(3, "Wrong password")
-            else:
-                return request_failed(2, "User does not exist")
-        else:
+
+        if not name_valid(name):
             return request_failed(1, "Illegal username")
+        user = name_exist(name)
+        if not user:
+            return request_failed(2, "User does not exist")
+        if not check_password(password, user.password):
+            return request_failed(3, "Wrong password")
+        if verify_user(user.user_id):
+            return request_failed(5, "User already logged in")
+        
+        # Successful login
+        bind_session_id(get_session_id(req), user.user_id)
+        return request_success({"Logged in": True})
         
             
     @action(detail=False, methods=["POST"])
