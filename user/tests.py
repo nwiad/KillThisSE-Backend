@@ -7,12 +7,27 @@ from utils.utils_friends import isFriend, requestExists, addFriends, sendFriendR
 from django.urls import reverse
 from unittest.mock import patch
 
+# 成功注册
+def register_someone(self, data):
+    response = self.client.post(reverse("user-register"), data=data, content_type="application/json")
+    response_content = json.loads(response.content)
+    expected_content = {"code": 0, "info": "Succeed", "Created": True}
+    self.assertEqual(response_content, expected_content)
+    return response
+
+# 尝试注册
+def register_try(self, data):
+    response = self.client.post(reverse("user-register"), data=data, content_type="application/json")
+    return response
+
+# 成功登录
 def login_someone(self, data):
     response = self.client.post('/user/login/', data=data, content_type='application/json')
     response_content = json.loads(response.content)
     self.assertEqual(response_content, {'code': 0, 'info': 'Succeed', "Logged in": True})
     return response
 
+# 尝试登录
 def login_try(self, data):
     response = self.client.post('/user/login/', data=data, content_type='application/json')
     return response
@@ -45,10 +60,7 @@ class UserViewTests(TestCase):
             "name": "testuser0",
             "password": "newpassword0"
         }
-        response = self.client.post(reverse("user-register"), data=request_data, content_type="application/json")
-        response_content = json.loads(response.content)
-        expected_content = {"code": 0, "info": "Succeed", "Created": True}
-        self.assertEqual(response_content, expected_content)
+        response = register_someone(self, request_data)
         self.assertTrue(User.objects.filter(name="testuser0").exists())
 
     # 非法用户名
@@ -57,7 +69,7 @@ class UserViewTests(TestCase):
             "name": "testuser12345678901234567890",
             "password": "testpassword"
         }
-        response = self.client.post(reverse("user-register"), data=request_data, content_type="application/json")
+        response = register_try(self, request_data)
         self.assertEqual(response.status_code, 400)
         response_content = json.loads(response.content)
         self.assertEqual(response_content, {"code": 1, "info": 'Illegal username'})
@@ -68,7 +80,7 @@ class UserViewTests(TestCase):
             "name": "testuser",
             "password": "testpassword"
         }
-        response = self.client.post(reverse("user-register"), data=request_data, content_type="application/json")
+        response = register_try(self, request_data)
         self.assertEqual(response.status_code, 400)
         self.assertFalse(User.objects.filter(name="testuser", password=make_password("testpassword")).exists())
         self.assertEqual(response.content, b'{"code": 2, "info": "Username already exists"}')
@@ -79,7 +91,7 @@ class UserViewTests(TestCase):
             "name": "testuser123",
             "password": "tes"
         }
-        response = self.client.post(reverse("user-register"), data=request_data, content_type="application/json")
+        response = register_try(self, request_data)
         self.assertEqual(response.status_code, 400)
         response_content = json.loads(response.content)
         self.assertEqual(response_content, {"code": 3, "info": 'Illegal password'})
@@ -90,7 +102,7 @@ class UserViewTests(TestCase):
             "name": "testuser1",
             "password": "newpassword1"
         }
-        response = self.client.post(reverse("user-register"), data=request_data, content_type="application/json")
+        response = register_try(self, request_data)
         self.assertEqual(response.status_code, 200)
         # log in user
         login_someone(self, request_data)
