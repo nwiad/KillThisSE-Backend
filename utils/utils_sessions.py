@@ -26,7 +26,9 @@ def verify_session_id(sessionId):
         if sessionRecord.expireAt < datetime.datetime.now(pytz.timezone(TIME_ZONE)):
             SessionPool.objects.get(sessionId=sessionId).delete()
             return None
-        return sessionRecord.user
+        else:
+            user = User.objects.filter(user_id=sessionRecord.user_id).first()
+            return user
     else:
         return None
     
