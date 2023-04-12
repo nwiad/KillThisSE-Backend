@@ -17,6 +17,9 @@ def request_success(data={}):
 
 
 def return_field(obj_dict, field_list):
+    """
+    return a dict, in which keys are listed in field_list
+    """
     for field in field_list:
         assert field in obj_dict, f"Field `{field}` not found in object."
 
