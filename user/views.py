@@ -261,7 +261,6 @@ class UserViewSet(viewsets.ViewSet):
     
 
     @action(detail=False, methods=["GET"])
-    @CheckLogin
     def get_friends(self, req: HttpRequest):
         user = verify_session_id(get_session_id(req))
         friendship_list = Friendship.objects.filter(user_id=user.user_id)
