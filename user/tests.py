@@ -2,6 +2,7 @@ import json
 from django.test import TestCase, RequestFactory, Client
 from django.contrib.auth.hashers import make_password
 from user.models import User
+from user.models import FriendshipRequest
 from user.views import UserViewSet
 from utils.utils_friends import isFriend, requestExists, addFriends, sendFriendRequest
 from django.urls import reverse
@@ -30,6 +31,31 @@ def login_someone(self, data):
 # 尝试登录
 def login_try(self, data):
     response = self.client.post('/user/login/', data=data, content_type='application/json')
+    return response
+
+# by name
+def sbn(self, data):
+    response = self.client.post('/user/search_by_name/', data=data, content_type='application/json')
+    return response
+
+# by id
+def sbi(self, data):
+    response = self.client.post('/user/search_by_id/', data=data, content_type='application/json')
+    return response
+
+# by fname 
+def sfbn(self, data):
+    response = self.client.post('/user/search_friend_by_name/', data=data, content_type='application/json')
+    return response
+
+# by fid
+def sfbi(self, data):
+    response = self.client.post('/user/search_friend_by_id/', data=data, content_type='application/json')
+    return response
+
+# del friend
+def delf(self, data):
+    response = self.client.post('/user/del_friend/', data=data, content_type='application/json')
     return response
 
 class UserViewTests(TestCase):
@@ -110,8 +136,6 @@ class UserViewTests(TestCase):
         response = self.client.post('/user/cancel_account/', data=request_data, content_type='application/json')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, b'{"code": 0, "info": "Succeed", "Deleted": true}')
-        
-        
 
 #! login
     # 正常登录
@@ -340,18 +364,8 @@ class UserViewTests(TestCase):
     # send_friend_request
     def test_send_friend_request(self):
         # 创建两个新用户并登录1
-        request_data = {
-            "name": "testuser1",
-            "password": "newpassword1"
-        }
-        register_someone(self, request_data)
-        
-        request_data = {
-            "name": "testuser2",
-            "password": "newpassword2"
-        }
-        register_someone(self, request_data)
-
+        user1 = User.objects.create(name="testuser1", password=make_password("newpassword1"))
+        user2 = User.objects.create(name="testuser2", password=make_password("newpassword2"))
         # 登录1
         login_data = {'name': 'testuser1', 'password': 'newpassword1'}
         
@@ -359,11 +373,6 @@ class UserViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         response_content = json.loads(response.content)
         self.assertEqual(response_content, {'code': 0, 'info': 'Succeed', "Logged in": True})
-        
-        
-        # 获取用户对象
-        user1 = User.objects.get(name='testuser1')
-        user2 = User.objects.get(name='testuser2')
 
         # 发送好友请求
         response = self.client.post(
@@ -478,40 +487,23 @@ class UserViewTests(TestCase):
             ]
         })
 
-        # # test case: no friend requests
-        # FriendshipRequest.objects.all().delete()
-        # response = self.client.get('/user/friend_requests/', **headers)
-        # self.assertEqual(response.status_code, 200)
-        # self.assertEqual(response.json(), {"requests": []})
+        # test case: no friend requests
+        
+        FriendshipRequest.objects.all().delete()
+        response = self.client.get('/user/get_friend_requests/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'code': 0, 'info': 'Succeed', 'requests': []})
 
-        # # test case: invalid session id
-        # headers['HTTP_SESSION_ID'] = 'invalid_session_id'
-        # response = self.client.get('/user/friend_requests/', **headers)
-        # self.assertEqual(response.status_code, 401)
-        # self.assertEqual(response.json(), {"error_code": 1, "error_message": "Invalid session ID"})
 
     # respond_friend_request  ok
     def test_respond_friend_request(self):
-        # 创建两个新用户
-        request_data = {
-            "name": "testuser11",
-            "password": "newpassword11"
-        }
-        register_someone(self, request_data)
-        
-        request_data = {
-            "name": "testuser22",
-            "password": "newpassword22"
-        }
-        register_someone(self, request_data)
+        # 创建两个新用户       
+        user1 = User.objects.create(name="testuser11", password=make_password("newpassword11"))
+        user2 = User.objects.create(name="testuser22", password=make_password("newpassword22"))
 
         # 登录第一个用户
         login_data = {'name': 'testuser11', 'password': 'newpassword11'}
         login_someone(self, login_data)
-        
-        # 获取用户对象
-        user1 = User.objects.get(name='testuser11')
-        user2 = User.objects.get(name='testuser22')
 
         # 发送好友请求
         response = self.client.post(
@@ -557,25 +549,12 @@ class UserViewTests(TestCase):
     # respond_friend_request  no
     def test_respond_friend_request(self):
         # 创建两个新用户
-        request_data = {
-            "name": "testuser11",
-            "password": "newpassword11"
-        }
-        register_someone(self, request_data)
+        user1 = User.objects.create(name="testuser11", password=make_password("newpassword11"))
+        user2 = User.objects.create(name="testuser22", password=make_password("newpassword22"))
         
-        request_data = {
-            "name": "testuser22",
-            "password": "newpassword22"
-        }
-        register_someone(self, request_data)
-
         # 登录第一个用户
         login_data = {'name': 'testuser11', 'password': 'newpassword11'}
         login_someone(self, login_data)
-        
-        # 获取用户对象
-        user1 = User.objects.get(name='testuser11')
-        user2 = User.objects.get(name='testuser22')
 
         # 发送好友请求
         response = self.client.post(
@@ -634,7 +613,7 @@ class UserViewTests(TestCase):
         
         # 模拟请求
         data={'friend_user_id': friend.user_id}
-        response = self.client.post('/user/del_friend/', data=data, content_type='application/json')
+        response = delf(self, data)
   
         # 断言响应状态码和内容
         self.assertEqual(response.status_code, 200)
@@ -646,13 +625,13 @@ class UserViewTests(TestCase):
         
         # 删除不存在的好友
         data={'friend_user_id': 999}
-        response = self.client.post('/user/del_friend/', data=data, content_type='application/json')
+        response = delf(self, data)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json(), {'code': 2, 'info': 'your Friend not exist'})
         
         # 删除非好友
         data={'friend_user_id': user.user_id}
-        response = self.client.post('/user/del_friend/', data=data, content_type='application/json')
+        response = delf(self, data)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json(), {'code': 3, 'info': 'Not your friend'})
         
@@ -697,7 +676,8 @@ class UserViewTests(TestCase):
         data={
             'friend_user_id': teuser.user_id,
         }
-        response = self.client.post('/user/search_by_id/', data=data, content_type='application/json')
+        response = sbi(self, data)
+        
 
         # 断言响应状态码和内容
         self.assertEqual(response.status_code, 200)
@@ -713,7 +693,7 @@ class UserViewTests(TestCase):
         data={
             'friend_user_id': 999,
         }
-        response = self.client.post('/user/search_by_id/', data=data, content_type='application/json')
+        response = sbi(self, data)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json(), {'code':2, 'info': "User searched by id not exist"})
         # 删除测试用户
@@ -733,7 +713,7 @@ class UserViewTests(TestCase):
         data={
             'friend_name': teuser.name,
         }
-        response = self.client.post('/user/search_by_name/', data=data, content_type='application/json')
+        response = sbn(self, data)
 
         # 断言响应状态码和内容
         self.assertEqual(response.status_code, 200)
@@ -749,7 +729,8 @@ class UserViewTests(TestCase):
         data={
             'friend_name': "99999",
         }
-        response = self.client.post('/user/search_by_name/', data=data, content_type='application/json')
+        
+        response = sbn(self, data)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json(), {'code':2, 'info': "User searched by name not exist"})
         # 删除测试用户
@@ -767,7 +748,7 @@ class UserViewTests(TestCase):
         data={
             'friend_id': 999
         }
-        response = self.client.post('/user/search_friend_by_id/', data=data, content_type='application/json')
+        response = sfbi(self, data)
 
         self.assertEqual(response.json(),{'code': 2, 'info': 'Friend searched by id not exist'})
         
@@ -778,7 +759,7 @@ class UserViewTests(TestCase):
         data={
             "friend_id": user00.user_id
         }
-        response = self.client.post('/user/search_friend_by_id/', data=data, content_type='application/json')
+        response = sfbi(self, data)
         self.assertEqual(response.json(),
                          {
                             'code': 0, 
@@ -799,7 +780,7 @@ class UserViewTests(TestCase):
         data={
             'friend_name': "99999"
         }
-        response = self.client.post('/user/search_friend_by_name/', data=data, content_type='application/json')
+        response = sfbn(self, data)
 
         self.assertEqual(response.json(),{'code': 2, 'info': 'Friend searched by name not exist'})
         
@@ -810,7 +791,8 @@ class UserViewTests(TestCase):
         data={
             'friend_name': userstanger.name
         }
-        response = self.client.post('/user/search_friend_by_name/', data=data, content_type='application/json')
+        response = sfbn(self, data)
+        
         self.assertEqual(response.json(),{'code': 2, 'info': "Friend you search not exist"})
         
         # 成功
@@ -820,7 +802,8 @@ class UserViewTests(TestCase):
         data={
             "friend_name": user00.name
         }
-        response = self.client.post('/user/search_friend_by_name/', data=data, content_type='application/json')
+        response = sfbn(self, data)
+        
         self.assertEqual(response.json(),
                          {
                             'code': 0, 
@@ -854,19 +837,8 @@ class UserViewTests(TestCase):
 #! 用户列表        
     # users
     def test_users(self):
-        # 创建两个用户
-        request_data = {
-            "name": "testuser11",
-            "password": "newpassword11"
-        }
-        register_someone(self, request_data)
-        
-        request_data = {
-            "name": "testuser22",
-            "password": "newpassword22"
-        }
-        register_someone(self, request_data)
-
+        User.objects.create(name="testuser11", password=make_password("newpassword11"))
+        User.objects.create(name="testuser22", password=make_password("newpassword22"))
         # 获取用户列表并检查状态代码是否为200
         response = self.client.get("/user/users/")
         self.assertEqual(response.status_code, 200)
