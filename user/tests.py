@@ -344,15 +344,13 @@ class UserViewTests(TestCase):
             "name": "testuser1",
             "password": "newpassword1"
         }
-        response = self.client.post(reverse("user-register"), data=request_data, content_type="application/json")
-        self.assertEqual(response.status_code, 200)
+        register_someone(self, request_data)
         
         request_data = {
             "name": "testuser2",
             "password": "newpassword2"
         }
-        response = self.client.post(reverse("user-register"), data=request_data, content_type="application/json")
-        self.assertEqual(response.status_code, 200)
+        register_someone(self, request_data)
 
         # 登录1
         login_data = {'name': 'testuser1', 'password': 'newpassword1'}
@@ -499,19 +497,17 @@ class UserViewTests(TestCase):
             "name": "testuser11",
             "password": "newpassword11"
         }
-        response = self.client.post(reverse("user-register"), data=request_data, content_type="application/json")
-        self.assertEqual(response.status_code, 200)
+        register_someone(self, request_data)
         
         request_data = {
             "name": "testuser22",
             "password": "newpassword22"
         }
-        response = self.client.post(reverse("user-register"), data=request_data, content_type="application/json")
-        self.assertEqual(response.status_code, 200)
+        register_someone(self, request_data)
 
         # 登录第一个用户
         login_data = {'name': 'testuser11', 'password': 'newpassword11'}
-        response = login_someone(self, login_data)
+        login_someone(self, login_data)
         
         # 获取用户对象
         user1 = User.objects.get(name='testuser11')
@@ -565,15 +561,13 @@ class UserViewTests(TestCase):
             "name": "testuser11",
             "password": "newpassword11"
         }
-        response = self.client.post(reverse("user-register"), data=request_data, content_type="application/json")
-        self.assertEqual(response.status_code, 200)
+        register_someone(self, request_data)
         
         request_data = {
             "name": "testuser22",
             "password": "newpassword22"
         }
-        response = self.client.post(reverse("user-register"), data=request_data, content_type="application/json")
-        self.assertEqual(response.status_code, 200)
+        register_someone(self, request_data)
 
         # 登录第一个用户
         login_data = {'name': 'testuser11', 'password': 'newpassword11'}
@@ -865,15 +859,13 @@ class UserViewTests(TestCase):
             "name": "testuser11",
             "password": "newpassword11"
         }
-        response = self.client.post(reverse("user-register"), data=request_data, content_type="application/json")
-        self.assertEqual(response.status_code, 200)
+        register_someone(self, request_data)
         
         request_data = {
             "name": "testuser22",
             "password": "newpassword22"
         }
-        response = self.client.post(reverse("user-register"), data=request_data, content_type="application/json")
-        self.assertEqual(response.status_code, 200)
+        register_someone(self, request_data)
 
         # 获取用户列表并检查状态代码是否为200
         response = self.client.get("/user/users/")
