@@ -72,7 +72,7 @@ class UserViewSet(viewsets.ViewSet):
         if not user.check_password(password):
             return request_failed(3, "Wrong password")
         if verify_user(user):
-            pass
+            Token.objects.filter(user=user).delete()
         
         # Successful login
         print(user.user_id)
@@ -87,7 +87,7 @@ class UserViewSet(viewsets.ViewSet):
     def logout(self, req: HttpRequest):
         body = json.loads(req.body)
         token = body.get("token")
-        Token.objects.filter(token=token).delete()
+        Token.objects.filter(key=token).delete()
         return request_success({'Logged out': True})
 
         
