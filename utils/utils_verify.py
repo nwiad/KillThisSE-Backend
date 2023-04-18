@@ -10,7 +10,7 @@ from utils.utils_request import *
 def get_user(req: HttpRequest):
     body = json.loads(req.body)
     token = body.get("token")
-    record = Token.objects.filter(token=token).first()
+    record = Token.objects.filter(key=token).first()
     if record is None:
         return None
     else:
@@ -19,7 +19,7 @@ def get_user(req: HttpRequest):
 
 @sync_to_async
 def async_get_user(token: str):
-    record = Token.objects.filter(token=token).first()
+    record = Token.objects.filter(key=token).first()
     if record is None:
         return None
     else:

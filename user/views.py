@@ -72,7 +72,7 @@ class UserViewSet(viewsets.ViewSet):
         if not user.check_password(password):
             return request_failed(3, "Wrong password")
         if verify_user(user):
-            return request_failed(4, "User already logged in")
+            pass
         
         # Successful login
         print(user.user_id)

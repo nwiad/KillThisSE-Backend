@@ -25,7 +25,7 @@ def CheckLogin(check_fn):
         req = args[1]
         body = json.loads(req.body)
         token = body.get("token")
-        record = Token.objects.filter(token=token)
+        record = Token.objects.filter(key=token).first()
         if record:
             return check_fn(*args, **kwargs)
         else:
