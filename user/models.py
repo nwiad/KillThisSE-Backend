@@ -1,17 +1,17 @@
 from django.db import models
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 
 import datetime
 
 from utils.utils_time import *
-from utils.utils_constant import MAX_CHAR_LENGTH
+from utils.utils_constant import MAX_CHAR_LENGTH, MAX_NAME_LENGTH
 
 
-class User(models.Model):
+class User(AbstractBaseUser):
     user_id = models.BigAutoField(primary_key=True)
-    name = models.CharField(max_length=MAX_CHAR_LENGTH)
-    password = models.CharField(max_length=MAX_CHAR_LENGTH)
-    register_time = models.DateTimeField(default=datetime.datetime.now)
-    login_time = models.DateTimeField(default=datetime.datetime.now)
+    name = models.CharField(max_length=MAX_NAME_LENGTH, unique=True)
+    USERNAME_FIELD = "name"
+    
     avatar = models.CharField(max_length=MAX_CHAR_LENGTH, default="https://github.com/LTNSXD/LTNSXD.github.io/blob/main/img/favicon.jpg?raw=true")
 
     def serialize(self):
@@ -41,12 +41,3 @@ class FriendshipRequest(models.Model):
 
     class Meta:
         unique_together = ('user_id', 'friend_user_id')
-
-
-class SessionPool(models.Model):
-    sessionId = models.CharField(max_length=32)
-    user_id = models.IntegerField(unique=True)
-    expireAt = models.DateTimeField(default=get_datetime)
-
-    class Mata:
-        indexes = [models.Index(fields=["sessionId"])]
