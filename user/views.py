@@ -71,7 +71,7 @@ class UserViewSet(viewsets.ViewSet):
             return request_failed(2, "User does not exist")
         if not user.check_password(password):
             return request_failed(3, "Wrong password")
-        if verify_user(user.user_id):
+        if verify_user(user):
             return request_failed(4, "User already logged in")
         
         # Successful login
@@ -85,7 +85,8 @@ class UserViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def logout(self, req: HttpRequest):
-        token = req.get('token')
+        body = json.loads(req.body)
+        token = body.get("token")
         Token.objects.filter(token=token).delete()
         return request_success({'Logged out': True})
 

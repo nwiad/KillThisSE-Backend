@@ -23,10 +23,8 @@ def CheckLogin(check_fn):
     @wraps(check_fn)
     def decorated(*args, **kwargs):
         req = args[1]
-        if not hasattr(req, "token"):
-            return request_failed(1, "Not logged in", 400)
-        
-        token = req.token
+        body = json.loads(req.body)
+        token = body.get("token")
         record = Token.objects.filter(token=token)
         if record:
             return check_fn(*args, **kwargs)
