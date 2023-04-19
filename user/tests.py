@@ -798,113 +798,112 @@ class UserViewTests(TestCase):
         # 删除测试用户
         user.delete()
 
-# #! 好友范围搜索
-#     # by id
-#     def test_search_friend_by_id(self):
-#         # 登录user 
-#         login_data = {'name': 'testuser', 'password': '12345678'}
-#         login_someone(self, login_data)
-#         user01 = User.objects.get(name="testuser")
-#         user00 = User.objects.get(name="user000")
-#         # 失败
-#         data={
-#             'friend_id': 999
-#         }
-#         response = sfbi(self, data)
+#! 好友范围搜索
+    # by id
+    def test_search_friend_by_id(self):
+        # 登录user 
+        login_data = {'name': 'testuser', 'password': '12345678'}
+        response = login_someone(self, login_data)
+        token = response.json()['Token']
+        
+        user01 = User.objects.get(name="testuser")
+        user00 = User.objects.get(name="user000")
+        # 失败
+        data={
+            'friend_id': 999,
+            "token": token
+        }
+        response = sfbi(self, data)
 
-#         self.assertEqual(response.json(),{'code': 2, 'info': 'Friend searched by id not exist'})
+        self.assertEqual(response.json(),{'code': 2, 'info': 'Friend searched by id not exist'})
         
-#         # 成功
-#         aref = isFriend(user01, user00)
-#         self.assertTrue(aref)
+        # 成功
+        aref = isFriend(user01, user00)
+        self.assertTrue(aref)
         
-#         data={
-#             "friend_id": user00.user_id
-#         }
-#         response = sfbi(self, data)
-#         self.assertEqual(response.json(),
-#                          {
-#                             'code': 0, 
-#                             'info': 'Succeed', 
-#                             'user_id':user00.user_id, 
-#                             'avatar': user00.avatar,
-#                             'name': user00.name
-#                          })
+        data={
+            "friend_id": user00.user_id,
+            "token": token
+        }
+        response = sfbi(self, data)
+        self.assertEqual(response.json(),
+                         {
+                            'code': 0, 
+                            'info': 'Succeed', 
+                            'user_id':user00.user_id, 
+                            'avatar': user00.avatar,
+                            'name': user00.name
+                         })
 
-#     # by name
-#     def test_search_friend_by_name(self):
-#         # 登录user 
-#         login_data = {'name': 'testuser', 'password': '12345678'}
-#         login_someone(self, login_data)
-#         user01 = User.objects.get(name="testuser")
-#         user00 = User.objects.get(name="user000")
-#         # 失败 不存在此人
-#         data={
-#             'friend_name': "99999"
-#         }
-#         response = sfbn(self, data)
+    # by name
+    def test_search_friend_by_name(self):
+        # 登录user 
+        login_data = {'name': 'testuser', 'password': '12345678'}
+        response = login_someone(self, login_data)
+        token = response.json()['Token']
+        user01 = User.objects.get(name="testuser")
+        user00 = User.objects.get(name="user000")
+        # 失败 不存在此人
+        data={
+            'friend_name': "99999",
+            "token": token
+        }
+        response = sfbn(self, data)
 
-#         self.assertEqual(response.json(),{'code': 2, 'info': 'Friend searched by name not exist'})
+        self.assertEqual(response.json(),{'code': 2, 'info': 'Friend searched by name not exist'})
         
         
-#         userstanger = User.objects.create(name="stranger", password=make_password("password"))
+        userstanger = User.objects.create(name="stranger", password=make_password("password"))
         
-#         # 失败 非好友    
-#         data={
-#             'friend_name': userstanger.name
-#         }
-#         response = sfbn(self, data)
+        # 失败 非好友    
+        data={
+            'friend_name': userstanger.name,
+            "token": token
+        }
+        response = sfbn(self, data)
         
-#         self.assertEqual(response.json(),{'code': 2, 'info': "Friend you search not exist"})
+        self.assertEqual(response.json(),{'code': 2, 'info': "Friend you search not exist"})
         
-#         # 成功
-#         aref = isFriend(user01, user00)
-#         self.assertTrue(aref)
+        # 成功
+        aref = isFriend(user01, user00)
+        self.assertTrue(aref)
         
-#         data={
-#             "friend_name": user00.name
-#         }
-#         response = sfbn(self, data)
+        data={
+            "friend_name": user00.name,
+            "token": token
+        }
+        response = sfbn(self, data)
         
-#         self.assertEqual(response.json(),
-#                          {
-#                             'code': 0, 
-#                             'info': 'Succeed', 
-#                             'user_id':user00.user_id, 
-#                             'avatar': user00.avatar,
-#                             'name': user00.name
-#                          })
+        self.assertEqual(response.json(),
+                        {
+                        'code': 0, 
+                        'info': 'Succeed', 
+                        'user_id':user00.user_id, 
+                        'avatar': user00.avatar,
+                        'name': user00.name
+                        })
 
 
-# #! 好友列表
-#     def test_get_friends(self):
-#         data = {
-#             "name": "testuser", 
-#             "password": "12345678"
-#         }
-#         login_someone(self, data)
-#         response = self.client.post('/user/get_friends/', content_type='application/json')
-#         self.assertEqual(response.status_code, 200)
-#         list = []
-#         for who in User.objects.all():
-#             if isFriend(User.objects.get(name="testuser"), who):
-#                 list.append({
-#                     'avatar':who.avatar,
-#                     'name':who.name,
-#                     'user_id':who.user_id
-#                     })
+#! 好友列表
+    def test_get_friends(self):
+        data = {
+            "name": "testuser", 
+            "password": "12345678"
+        }
+        response = login_someone(self, data)
+        token = response.json()['Token']
+        data = {
+            "token": token
+        }
+        response = self.client.post('/user/get_friends/', data = data, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        list = []
+        for who in User.objects.all():
+            if isFriend(User.objects.get(name="testuser"), who):
+                list.append({
+                    'avatar':who.avatar,
+                    'name':who.name,
+                    'user_id':who.user_id
+                    })
         
-#         self.assertEqual(response.json(), {'code': 0, 'friends': list, 'info': 'Succeed'})
-
-# #! 用户列表        
-#     # users
-#     def test_users(self):
-#         User.objects.create(name="testuser11", password=make_password("newpassword11"))
-#         User.objects.create(name="testuser22", password=make_password("newpassword22"))
-#         # 获取用户列表并检查状态代码是否为200
-#         response = self.client.post("/user/users/")
-#         self.assertEqual(response.status_code, 200)
-
-#         # 检查返回的用户列表是否正确
-#         response_content = json.loads(response.content)
-#         self.assertEqual(len(response_content["users"]), 4)
+        self.assertEqual(response.json(), {'code': 0, 'friends': list, 'info': 'Succeed'})
