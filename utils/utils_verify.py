@@ -18,12 +18,18 @@ def get_user(req: HttpRequest):
     
 
 @sync_to_async
-def async_get_user(token: str):
+def async_get_user_by_token(token: str):
     record = Token.objects.filter(key=token).first()
     if record is None:
         return None
     else:
         return record.user
+    
+
+@sync_to_async
+def async_get_user_by_id(id: int):
+    user = User.objects.filter(user_id=id).first()
+    return user
 
 
 def verify_user(user:User):
