@@ -23,7 +23,8 @@ def CheckLogin(check_fn):
     @wraps(check_fn)
     def decorated(*args, **kwargs):
         req = args[1]
-        body = json.loads(req.body)
+        print(req)
+        body = json.loads(req.body.decode("utf-8"))
         token = body.get("token")
         record = Token.objects.filter(key=token).first()
         if record:

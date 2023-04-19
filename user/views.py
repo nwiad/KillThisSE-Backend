@@ -142,7 +142,7 @@ class UserViewSet(viewsets.ViewSet):
         return request_success({"Modified": True})
 
 
-    @action(detail=False, methods=["GET"])
+    @action(detail=False, methods=["POST"])
     @CheckLogin
     def get_friend_requests(self, req: HttpRequest):
         user = get_user(req)
@@ -229,7 +229,7 @@ class UserViewSet(viewsets.ViewSet):
         return request_success({"Deleted": True})
         
     
-    @action(detail=False, methods=["GET"])
+    @action(detail=False, methods=["POST"])
     @CheckLogin
     def get_profile(self, req: HttpRequest):
         user = get_user(req)
@@ -266,7 +266,7 @@ class UserViewSet(viewsets.ViewSet):
         return request_success(return_data)
     
 
-    @action(detail=False, methods=["GET"])
+    @action(detail=False, methods=["POST"])
     @CheckLogin
     def get_friends(self, req: HttpRequest):
         user = get_user(req)
@@ -322,7 +322,7 @@ class UserViewSet(viewsets.ViewSet):
         return request_success(return_data)
 
 
-    @action(detail=False, methods=["GET"])
+    @action(detail=False, methods=["POST"])
     def users(self, req: HttpRequest):
         users = User.objects.all().order_by('register_time')
         return_data = {

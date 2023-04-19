@@ -8,7 +8,7 @@ from asgiref.sync import sync_to_async
 from utils.utils_request import *
 
 def get_user(req: HttpRequest):
-    body = json.loads(req.body)
+    body = json.loads(req.body.decode("utf-8"))
     token = body.get("token")
     record = Token.objects.filter(key=token).first()
     if record is None:
