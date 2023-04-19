@@ -43,9 +43,10 @@ class UserViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def cancel_account(self, req: HttpRequest):
-        token = req.get('token')
+        body = json.loads(req.body.decode("utf-8"))
+        token = body.get("token")
         user = get_user(req)
-        token.delete()
+        Token.objects.filter(key=token).delete()
         user.delete()
         return request_success({"Deleted": True})
 
@@ -319,15 +320,4 @@ class UserViewSet(viewsets.ViewSet):
 
         return_data = return_field(friend.serialize(), ["user_id", "name", "avatar"])
 
-        return request_success(return_data)
-
-
-    @action(detail=False, methods=["POST"])
-    def users(self, req: HttpRequest):
-        users = User.objects.all().order_by('register_time')
-        return_data = {
-            "users": [
-                return_field(user.serialize(), ["user_id", "name", "avatar"]) 
-            for user in users],
-        }
         return request_success(return_data)
