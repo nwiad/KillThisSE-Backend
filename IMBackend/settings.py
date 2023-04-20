@@ -26,6 +26,7 @@ SECRET_KEY = 'django-insecure-zsd1(jud4^7u1-^^vzb8@o1=^@_q55(owv0jip$_0&2u$cwc#3
 # SECURITY WARNING: don't run with debug turned on in production!
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
+
 if os.getenv('DEPLOY'):
     DEBUG = False
     DATABASES = {
@@ -38,6 +39,14 @@ if os.getenv('DEPLOY'):
             'PASSWORD': '123456'  # mysql的密码
         }
     }
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [("redis.KillThisSE.secoder.local", 6379)],
+            },
+        },
+    }
 else:
     DEBUG = True
     DATABASES = {
@@ -45,6 +54,14 @@ else:
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
         }
+    }
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [("127.0.0.1", 6379)],
+            },
+        },
     }
 
 ALLOWED_HOSTS = [
