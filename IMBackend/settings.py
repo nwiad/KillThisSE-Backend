@@ -43,10 +43,18 @@ if os.getenv('DEPLOY'):
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
             "CONFIG": {
-                "hosts": [("redis.KillThisSE.secoder.local", 6379)],
+                "hosts": [("127.0.0.1", 6379)],
             },
         },
     }
+    # CHANNEL_LAYERS = {
+    #     "default": {
+    #         "BACKEND": "channels_redis.core.RedisChannelLayer",
+    #         "CONFIG": {
+    #             "hosts": [("redis.KillThisSE.secoder.local", 6379)],
+    #         },
+    #     },
+    # }
 else:
     DEBUG = True
     DATABASES = {
