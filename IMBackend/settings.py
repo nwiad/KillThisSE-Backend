@@ -29,32 +29,30 @@ SECRET_KEY = 'django-insecure-zsd1(jud4^7u1-^^vzb8@o1=^@_q55(owv0jip$_0&2u$cwc#3
 
 if os.getenv('DEPLOY'):
     DEBUG = False
+    # DATABASES = {
+    #     'default': {
+    #         'ENGINE': 'django.db.backends.mysql',  # 默认
+    #         'NAME': 'im',  # 连接的数据库
+    #         'HOST': 'database.KillThisSE.secoder.local',  # mysql的ip地址
+    #         'PORT': 3306,  # mysql的端口
+    #         'USER': 'root',  # mysql的用户名
+    #         'PASSWORD': '123456'  # mysql的密码
+    #     }
+    # }
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.mysql',  # 默认
-            'NAME': 'im',  # 连接的数据库
-            'HOST': 'database.KillThisSE.secoder.local',  # mysql的ip地址
-            'PORT': 3306,  # mysql的端口
-            'USER': 'root',  # mysql的用户名
-            'PASSWORD': '123456'  # mysql的密码
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
             "CONFIG": {
-                "hosts": [("127.0.0.1", 6379)],
+                "hosts": [("redis.KillThisSE.secoder.local", 6379)],
             },
         },
     }
-    # CHANNEL_LAYERS = {
-    #     "default": {
-    #         "BACKEND": "channels_redis.core.RedisChannelLayer",
-    #         "CONFIG": {
-    #             "hosts": [("redis.KillThisSE.secoder.local", 6379)],
-    #         },
-    #     },
-    # }
 else:
     DEBUG = True
     DATABASES = {

@@ -11,13 +11,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.user_id = self.scope['url_route']['kwargs']['userid']
                 
         # Join room group
-        await self.channel_layer.group_add(self.user_id, self.channel_name)
+        await self.channel_layer.group_add(str(self.user_id), self.channel_name)
 
         await self.accept()
 
     async def disconnect(self, close_code):
         # Leave room group
-        await self.channel_layer.group_discard(self.user_id, self.channel_name)
+        await self.channel_layer.group_discard(str(self.user_id), self.channel_name)
 
     # Receive message from WebSocket
     async def receive(self, text_data):
