@@ -39,14 +39,14 @@ if os.getenv('DEPLOY'):
             'PASSWORD': '123456'  # mysql的密码
         }
     }
-    CHANNEL_LAYERS = {
-        "default": {
-            "BACKEND": "channels_redis.core.RedisChannelLayer",
-            "CONFIG": {
-                "hosts": [("redis.KillThisSE.secoder.local", 6379)],
-            },
-        },
-    }
+    # CHANNEL_LAYERS = {
+    #     "default": {
+    #         "BACKEND": "channels_redis.core.RedisChannelLayer",
+    #         "CONFIG": {
+    #             "hosts": [("redis.KillThisSE.secoder.local", 6379)],
+    #         },
+    #     },
+    # }
 else:
     DEBUG = True
     DATABASES = {
