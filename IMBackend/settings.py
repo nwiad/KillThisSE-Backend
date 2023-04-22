@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-zsd1(jud4^7u1-^^vzb8@o1=^@_q55(owv0jip$_0&2u$cwc#3
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
-if False:
+if os.getenv('DEPLOY'):
     DEBUG = False
     DATABASES = {
         'default': {
