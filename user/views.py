@@ -61,6 +61,7 @@ class UserViewSet(viewsets.ViewSet):
         
     @action(detail=False, methods=["POST"])
     def login(self, req: HttpRequest):
+        print("Hey, what's wrong???")
         body = json.loads(req.body.decode("utf-8"))
         name = body.get('name')
         password = body.get('password')
