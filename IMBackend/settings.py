@@ -43,7 +43,7 @@ if os.getenv('DEPLOY'):
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
             "CONFIG": {
-                "hosts": ["redis://redis-KillThisSE.app.secoder.net:6379"],
+                "hosts": ["redis://redis.KillThisSE.secoder.local:6379"],
             },
         },
     }
