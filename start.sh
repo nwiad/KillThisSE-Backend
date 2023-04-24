@@ -6,6 +6,7 @@ python3 manage.py migrate
 uwsgi --module=IMBackend.asgi:application \
     --env DJANGO_SETTINGS_MODULE=IMBackend.settings \
     --master \
+    --http :80 \
     --http-websockets :80 \
     --plugin python\
     --processes=5 \
