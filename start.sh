@@ -3,7 +3,7 @@
 python3 manage.py makemigrations user
 python3 manage.py migrate
 
-uwsgi --module=IMBackend.wsgi:application \
+uwsgi --module=IMBackend.asgi:application \
     --env DJANGO_SETTINGS_MODULE=IMBackend.settings \
     --master \
     --http=0.0.0.0:80 \
