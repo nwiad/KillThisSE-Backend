@@ -6,8 +6,8 @@ python3 manage.py migrate
 uwsgi --module=IMBackend.asgi:application \
     --env DJANGO_SETTINGS_MODULE=IMBackend.settings \
     --master \
-    --http=0.0.0.0:80 \
-    --http-websockets \
+    --http-websockets :80 \
+    --plugin python\
     --processes=5 \
     --harakiri=20 \
     --max-requests=5000 \
