@@ -3,13 +3,12 @@
 python3 manage.py makemigrations user
 python3 manage.py migrate
 
-daphne -p 80 IMBackend.asgi:application
+daphne -b 0.0.0.0 -p 80 IMBackend.asgi:application
 
 uwsgi --module=IMBackend.wsgi:application \
     --env DJANGO_SETTINGS_MODULE=IMBackend.settings \
     --master \
-    --http :80 \
-    --plugin python\
+    --http=0.0.0.0:80 \
     --processes=5 \
     --harakiri=20 \
     --max-requests=5000 \
