@@ -41,7 +41,6 @@ class UserViewSet(viewsets.ViewSet):
             user.save()
         return request_success({"Created": True})
 
-
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def cancel_account(self, req: HttpRequest):
@@ -52,15 +51,13 @@ class UserViewSet(viewsets.ViewSet):
         user.delete()
         return request_success({"Deleted": True})
 
-
     @action(detail=False, methods=["POST"])
     def auto_login(self, req: HttpRequest):
         if get_user(req):
             return request_success({"Logged in": True})
         else:
             return request_failed(1, "Not logged in yet")
-        
-        
+              
     @action(detail=False, methods=["POST"])
     def login(self, req: HttpRequest):
         print("Hey, what's wrong???")
@@ -84,8 +81,7 @@ class UserViewSet(viewsets.ViewSet):
         token = Token.objects.get(user=user).key
         print(token)
         return request_success({"Logged in": True, "Token": token})
-        
-            
+                  
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def logout(self, req: HttpRequest):
@@ -187,8 +183,7 @@ class UserViewSet(viewsets.ViewSet):
         
         sendFriendRequest(user, friend)
         return request_success({"Send request": True})
-
-    
+ 
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def respond_friend_request(self, req: HttpRequest):
@@ -211,7 +206,6 @@ class UserViewSet(viewsets.ViewSet):
         elif response == "reject":
             requestExists(friend, user).delete()
             return request_success({"Become Friends": False})
-
         
     @action(detail=False, methods=["POST"])
     @CheckLogin
@@ -231,8 +225,7 @@ class UserViewSet(viewsets.ViewSet):
         Friendship.objects.filter(user_id=user.user_id, friend_user_id=friend_id).delete()
         Friendship.objects.filter(user_id=friend_id, friend_user_id=user.user_id).delete()
         return request_success({"Deleted": True})
-        
-    
+           
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def get_profile(self, req: HttpRequest):
@@ -240,8 +233,7 @@ class UserViewSet(viewsets.ViewSet):
 
         return_data = return_field(user.serialize(), ["user_id", "name", "avatar"])
         return request_success(return_data)
-    
-    
+       
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def search_by_id(self, req: HttpRequest):
@@ -255,7 +247,6 @@ class UserViewSet(viewsets.ViewSet):
         return_data = return_field(friend.serialize(), ["user_id", "name", "avatar"])
         return request_success(return_data)
     
-
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def search_by_name(self, req: HttpRequest):
@@ -269,7 +260,6 @@ class UserViewSet(viewsets.ViewSet):
         return_data = return_field(friend.serialize(), ["user_id", "name", "avatar"])
         return request_success(return_data)
     
-
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def get_friends(self, req: HttpRequest):
@@ -286,7 +276,6 @@ class UserViewSet(viewsets.ViewSet):
         }
         return request_success(return_data)
     
-
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def search_friend_by_id(self, req: HttpRequest):
@@ -303,8 +292,7 @@ class UserViewSet(viewsets.ViewSet):
         return_data = return_field(friend.serialize(), ["user_id", "name", "avatar"])
 
         return request_success(return_data)
-
-        
+       
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def search_friend_by_name(self, req: HttpRequest):
@@ -342,7 +330,7 @@ class UserViewSet(viewsets.ViewSet):
         new_group_id = new_group.group_id
         # 返回group_id
         return request_success({"group_id": new_group_id})
-    
+
     @action(detail=False, methods=["POST"])
     @CheckLogin
     # 删除分组
@@ -358,7 +346,7 @@ class UserViewSet(viewsets.ViewSet):
         
         Group.objects.filter(group_id=group_id).delete()
         return request_success({"Deleted": True})
-    
+
     @action(detail=False, methods=["POST"])
     @CheckLogin
     # 获取分组
@@ -450,19 +438,31 @@ class UserViewSet(viewsets.ViewSet):
         GroupFriend.objects.filter(group_id=group_id, friend_user_id=friend_id).delete()
         return request_success({"Deleted": True})
     
-
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def get_private_conversations(self, req: HttpRequest):
         user = get_user(req)
         private_conversation_list = PrivateConversation.objects.filter(members__in=[user])
-        print(private_conversation_list)
-        return request_success()
-
+        # May be of little efficiency
+        r_member_list = [x.members.all() for x in private_conversation_list]
+        members = []
+        for member_list in r_member_list:
+            members += member_list
+        # deduplicate
+        members = list(set(members))
+        members.remove(user)
+        
+        return_data = {
+            "conversations": [
+                return_field(friend.serialize(), ["user_id", "name", "avatar"])
+                for friend in members
+            ]
+        }
+        return request_success(return_data)
 
     @action(detail=False, methods=["POST"])
     @CheckLogin
-    def get_or_create_private_conversation(self, req:HttpRequest):
+    def get_or_create_private_conversation(self, req: HttpRequest):
         user = get_user(req)
         body = json.loads(req.body.decode('utf-8'))
         friend_id = body.get('friend')
@@ -482,8 +482,7 @@ class UserViewSet(viewsets.ViewSet):
         conversation.members.add(user, friend)
         return request_success({"conversation_id": conversation.conversation_id})
 
-
     @action(detail=False, methods=["POST"])
     @CheckLogin
-    def create_group_conversation(self, req:HttpRequest):
+    def create_group_conversation(self, req: HttpRequest):
         pass
