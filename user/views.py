@@ -336,10 +336,10 @@ class UserViewSet(viewsets.ViewSet):
         if group:
             return request_failed(2, "Group name already exists")
         
-        new_group = Group.objects.create(group_name=group_name, admin_id=user.user_id)
+        new_group = Group.objects.create(group_name=group_name, admin_id=user.user_id) #admin是拥有这个群组的人
         new_group.save()
         new_group_id = new_group.group_id
-
+        # 返回group_id
         return request_success({"group_id": new_group_id})
     
     @action(detail=False, methods=["POST"])
@@ -363,7 +363,7 @@ class UserViewSet(viewsets.ViewSet):
     # 获取分组
     def get_group(self, req: HttpRequest):
         user = get_user(req)
-        group_list = Group.objects.all()
+        group_list = Group.objects.filter(admin_id=user.user_id)
         return_data = {
             "groups": [
                 return_field(group.serialize(), ["group_id", "group_name", "admin_id"])
@@ -382,7 +382,10 @@ class UserViewSet(viewsets.ViewSet):
         group = Group.objects.filter(group_id=group_id).first()
         if not group:
             return request_failed(2, "Group not exist")
+        if group.admin_id != user.user_id:
+            return request_failed(3, "You are not admin of this group")
         
+        # 返回这个组内的所有好友
         group_friend_list = GroupFriend.objects.filter(group_id=group_id)
         friend_id_list = [group_friend.friend_user_id for group_friend in group_friend_list]
         friend_list = [User.objects.filter(user_id=friend_id).first() for friend_id in friend_id_list]
@@ -406,14 +409,16 @@ class UserViewSet(viewsets.ViewSet):
         group = Group.objects.filter(group_id=group_id).first()
         if not group:
             return request_failed(2, "Group not exist")
+        if group.admin_id != user.user_id:
+            return request_failed(3, "You are not admin of this group")
         
         friendship = Friendship.objects.filter(user_id=user.user_id, friend_user_id=friend_id)
         if not friendship:
-            return request_failed(2, "Friend not exist")
+            return request_failed(4, "Friend not exist")
         
         group_friend = GroupFriend.objects.filter(group_id=group_id, friend_user_id=friend_id)
         if group_friend:
-            return request_failed(2, "Friend already in this group")
+            return request_failed(5, "Friend already in this group")
         
         new_group_friend = GroupFriend.objects.create(group_id=group_id, friend_user_id=friend_id)
         new_group_friend.save()
@@ -430,14 +435,16 @@ class UserViewSet(viewsets.ViewSet):
         group = Group.objects.filter(group_id=group_id).first()
         if not group:
             return request_failed(2, "Group not exist")
+        if group.admin_id != user.user_id:
+            return request_failed(3, "You are not admin of this group")
         
         friendship = Friendship.objects.filter(user_id=user.user_id, friend_user_id=friend_id)
         if not friendship:
-            return request_failed(2, "Friend not exist")
+            return request_failed(4, "Friend not exist")
         
         group_friend = GroupFriend.objects.filter(group_id=group_id, friend_user_id=friend_id)
         if not group_friend:
-            return request_failed(2, "Friend not in this group")
+            return request_failed(5, "Friend not in this group")
         
         GroupFriend.objects.filter(group_id=group_id, friend_user_id=friend_id).delete()
         return request_success({"Deleted": True})

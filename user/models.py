@@ -53,7 +53,7 @@ class Group(models.Model):
     class Meta:
         unique_together = ('group_id', 'group_name')
     
-# 群组成员
+# 群组成员和分组id的绑定关系
 class GroupFriend(models.Model):
     group_id = models.IntergerField() # group id
     user_id = models.IntegerField()  # user id
