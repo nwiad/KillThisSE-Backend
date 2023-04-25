@@ -1,6 +1,7 @@
 #!/bin/sh
 # 需要指定所有应用
 python3 manage.py makemigrations user
+python3 manage.py makemigrations msg
 python3 manage.py migrate
 
 daphne -b 0.0.0.0 -p 80 IMBackend.asgi:application

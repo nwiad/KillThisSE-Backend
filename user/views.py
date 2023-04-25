@@ -7,7 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.authtoken.models import Token
 
 from user.models import User, Friendship, FriendshipRequest, Group, GroupFriend
-from msg.models import PrivateConversation, GroupConversation
+from msg.models import Conversation
 from utils.utils_request import request_failed, request_success, return_field
 from utils.utils_require import CheckLogin, require
 from utils.utils_valid import *
@@ -442,7 +442,7 @@ class UserViewSet(viewsets.ViewSet):
     @CheckLogin
     def get_private_conversations(self, req: HttpRequest):
         user = get_user(req)
-        private_conversation_list = PrivateConversation.objects.filter(members__in=[user])
+        private_conversation_list = Conversation.objects.filter(members__in=[user])
         # May be of little efficiency
         r_member_list = [x.members.all() for x in private_conversation_list]
         members = []
@@ -473,11 +473,11 @@ class UserViewSet(viewsets.ViewSet):
         if not friendship:
             return request_failed(3, "You are not friends")
         # Successful get
-        if PrivateConversation.objects.filter(members__in=[user, friend]).first():
-            conversation = PrivateConversation.objects.filter(members__in=[user, friend]).first()
+        if Conversation.objects.filter(members__in=[user, friend]).first():
+            conversation = Conversation.objects.filter(members__in=[user, friend], is_Private=True).first()
             return request_success({"conversation_id": conversation.conversation_id})
         # Successful create
-        conversation = PrivateConversation.objects.create()
+        conversation = Conversation.objects.create(is_Private=True)
         conversation.save()
         conversation.members.add(user, friend)
         return request_success({"conversation_id": conversation.conversation_id})

@@ -23,9 +23,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
         token = text_data_json["token"]
         # Check_for_login
         if not token:
+            # TODO: Add more info
             await self.disconnect()
         sender = await async_get_user_by_token(token)
         if not sender:
+            # TODO: Add more info
             await self.disconnect()
         # Send message to current conversation
         await self.channel_layer.group_send(
