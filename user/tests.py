@@ -1,7 +1,7 @@
 import json
 from django.test import TestCase, RequestFactory, Client
 from django.contrib.auth.hashers import make_password
-from user.models import User, FriendshipRequest
+from user.models import User, FriendshipRequest, Group, GroupFriend
 from user.views import UserViewSet
 from utils.utils_friends import isFriend, requestExists, addFriends, sendFriendRequest
 from django.urls import reverse
@@ -109,8 +109,9 @@ class UserViewTests(TestCase):
         response = register_try(self, request_data)
         self.assertEqual(response.status_code, 400)
         self.assertFalse(User.objects.filter(name="testuser", password=make_password("testpassword")).exists())
-        self.assertEqual(response.content, b"{"code": 2, "info": "Username already exists"}")
+        self.assertEqual(response.content, b'{"code": 2, "info": "Username already exists"}')
         
+    
     # 非法密码
     def test_illegal_user_registration(self):
         request_data = {
@@ -139,7 +140,7 @@ class UserViewTests(TestCase):
         response = self.client.post("/user/cancel_account/", data=data, content_type="application/json")
         
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content, b"{"code": 0, "info": "Succeed", "Deleted": true}")
+        self.assertEqual(response.content, b'{"code": 0, "info": "Succeed", "Deleted": true}')
 
 #! login
     # 正常登录
@@ -167,7 +168,8 @@ class UserViewTests(TestCase):
             "password": "testpassword"
         }
         response = login_try(self, il_data)
-        self.assertEqual(response.content, b"{"code": 1, "info": "Illegal username"}")
+        self.assertEqual(response.content, b'{"code": 1, "info": "Illegal username"}')
+    
     
     # 试图登录不存在的用户
     def test_nonexsit_user_login(self):
@@ -189,7 +191,8 @@ class UserViewTests(TestCase):
         }
         response = login_try(self, wp_data)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.content, b"{"code": 3, "info": "Wrong password"}")
+        self.assertEqual(response.content, b'{"code": 3, "info": "Wrong password"}')
+    
     
     # logout
     def test_successful_logout(self):
@@ -906,3 +909,35 @@ class UserViewTests(TestCase):
                     })
         
         self.assertEqual(response.json(), {"code": 0, "friends": list, "info": "Succeed"})
+        
+        
+        
+#! 分组
+    # 创建和删除分组
+    def test_create_group(self):
+        User.objects.create(name="testuser111", password=make_password("12345678"))
+        data = {
+            "name": "testuser111", 
+            "password": "12345678"
+        }
+        response = login_someone(self, data)
+        token = response.json()["Token"]
+        data = {
+            "token": token, 
+            "name": "test_group"
+            }
+        
+        # 创建分组
+        response = self.client.post("/user/create_group/", data = data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        group = Group.objects.get(group_name="test_group")
+        self.assertEqual(response.json(), {"code": 0, "group_id": group.group_id, "info": "Succeed"})
+        
+        # 删除分组
+        response = self.client.post("/user/delete_group/", data = data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        group = Group.objects.filter(group_name="test_group")
+        self.assertEqual(response.json(), {"code": 0, "info": "Succeed"})
+        self.assertFalse(group)
+        
+        

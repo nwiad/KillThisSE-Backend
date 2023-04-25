@@ -45,7 +45,7 @@ class FriendshipRequest(models.Model):
         
 # 群组
 class Group(models.Model):
-    group_id = models.IntergerField() # group id
+    group_id = models.IntegerField() # group id
     group_name = models.CharField(max_length=MAX_NAME_LENGTH, unique=True) # group name
     admin_id = models.IntegerField()  # group admin
     update_time = models.DateTimeField(default=datetime.datetime.now)  # update time
@@ -55,7 +55,7 @@ class Group(models.Model):
     
 # 群组成员和分组id的绑定关系
 class GroupFriend(models.Model):
-    group_id = models.IntergerField() # group id
+    group_id = models.IntegerField() # group id
     user_id = models.IntegerField()  # user id
     update_time = models.DateTimeField(default=datetime.datetime.now)  # update time
     
