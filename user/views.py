@@ -6,7 +6,7 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.authtoken.models import Token
 
-from user.models import User, Friendship, FriendshipRequest, Group
+from user.models import User, Friendship, FriendshipRequest, Group, GroupFriend
 from utils.utils_request import request_failed, request_success, return_field
 from utils.utils_require import CheckLogin, require
 from utils.utils_valid import *
