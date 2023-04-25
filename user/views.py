@@ -21,6 +21,7 @@ def check_for_user_data(body):
     return name, password
 
 class UserViewSet(viewsets.ViewSet):
+#! 注册、登录、注销相关功能
     @action(detail=False, methods=["POST"])
     def register(self, req: HttpRequest):
         body = json.loads(req.body.decode("utf-8"))
@@ -92,7 +93,7 @@ class UserViewSet(viewsets.ViewSet):
         Token.objects.filter(key=token).delete()
         return request_success({'Logged out': True})
 
-        
+#! 修改个人信息相关功能        
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def reset_name(self, req: HttpRequest):
@@ -143,7 +144,7 @@ class UserViewSet(viewsets.ViewSet):
         user.save()
         return request_success({"Modified": True})
 
-
+#! 加好友相关功能
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def get_friend_requests(self, req: HttpRequest):
@@ -321,4 +322,75 @@ class UserViewSet(viewsets.ViewSet):
 
         return_data = return_field(friend.serialize(), ["user_id", "name", "avatar"])
 
+        return request_success(return_data)
+
+#! 分组相关功能
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    # 创建分组
+    def create_group(self, req: HttpRequest):
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        group_name = body.get('group_name')
+        group = Group.objects.filter(group_name=group_name).first()
+        if group:
+            return request_failed(2, "Group name already exists")
+        
+        new_group = Group.objects.create(group_name=group_name, admin_id=user.user_id)
+        new_group.save()
+        new_group_id = new_group.group_id
+
+        return request_success({"group_id": new_group_id})
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    # 删除分组
+    def del_group(self, req: HttpRequest):
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        group_id = body.get('group_id')
+        group = Group.objects.filter(group_id=group_id).first()
+        if not group:
+            return request_failed(2, "Group not exist")
+        if group.admin_id != user.user_id:
+            return request_failed(3, "You are not admin of this group")
+        
+        Group.objects.filter(group_id=group_id).delete()
+        return request_success({"Deleted": True})
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    # 获取分组
+    def get_group(self, req: HttpRequest):
+        user = get_user(req)
+        group_list = Group.objects.all()
+        return_data = {
+            "groups": [
+                return_field(group.serialize(), ["group_id", "group_name", "admin_id"])
+            for group in group_list
+            ]
+        }
+        return request_success(return_data)
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    # 获取某组内的好友
+    def get_group_friends(self, req: HttpRequest):
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        group_id = body.get('group_id')
+        group = Group.objects.filter(group_id=group_id).first()
+        if not group:
+            return request_failed(2, "Group not exist")
+        
+        group_friend_list = GroupFriend.objects.filter(group_id=group_id)
+        friend_id_list = [group_friend.friend_user_id for group_friend in group_friend_list]
+        friend_list = [User.objects.filter(user_id=friend_id).first() for friend_id in friend_id_list]
+
+        return_data = {
+            "friends": [
+                return_field(friend.serialize(), ["user_id", "name", "avatar"])
+            for friend in friend_list
+            ]
+        }
         return request_success(return_data)
