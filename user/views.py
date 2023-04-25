@@ -6,7 +6,7 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.authtoken.models import Token
 
-from user.models import User, Friendship, FriendshipRequest
+from user.models import User, Friendship, FriendshipRequest, Group
 from utils.utils_request import request_failed, request_success, return_field
 from utils.utils_require import CheckLogin, require
 from utils.utils_valid import *
@@ -331,7 +331,7 @@ class UserViewSet(viewsets.ViewSet):
     def create_group(self, req: HttpRequest):
         user = get_user(req)
         body = json.loads(req.body.decode("utf-8"))
-        group_name = body.get('group_name')
+        group_name = body.get('name')
         group = Group.objects.filter(group_name=group_name).first()
         if group:
             return request_failed(2, "Group name already exists")
@@ -394,3 +394,50 @@ class UserViewSet(viewsets.ViewSet):
             ]
         }
         return request_success(return_data)
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    # 添加好友到分组
+    def add_friend_to_group(self, req: HttpRequest):
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        group_id = body.get('group_id')
+        friend_id = body.get('friend_id')
+        group = Group.objects.filter(group_id=group_id).first()
+        if not group:
+            return request_failed(2, "Group not exist")
+        
+        friendship = Friendship.objects.filter(user_id=user.user_id, friend_user_id=friend_id)
+        if not friendship:
+            return request_failed(2, "Friend not exist")
+        
+        group_friend = GroupFriend.objects.filter(group_id=group_id, friend_user_id=friend_id)
+        if group_friend:
+            return request_failed(2, "Friend already in this group")
+        
+        new_group_friend = GroupFriend.objects.create(group_id=group_id, friend_user_id=friend_id)
+        new_group_friend.save()
+        return request_success({"Added": True})
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    # 从分组中删除好友
+    def del_friend_from_group(self, req: HttpRequest):
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        group_id = body.get('group_id')
+        friend_id = body.get('friend_id')
+        group = Group.objects.filter(group_id=group_id).first()
+        if not group:
+            return request_failed(2, "Group not exist")
+        
+        friendship = Friendship.objects.filter(user_id=user.user_id, friend_user_id=friend_id)
+        if not friendship:
+            return request_failed(2, "Friend not exist")
+        
+        group_friend = GroupFriend.objects.filter(group_id=group_id, friend_user_id=friend_id)
+        if not group_friend:
+            return request_failed(2, "Friend not in this group")
+        
+        GroupFriend.objects.filter(group_id=group_id, friend_user_id=friend_id).delete()
+        return request_success({"Deleted": True})

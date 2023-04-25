@@ -6,7 +6,7 @@ import datetime
 from utils.utils_time import *
 from utils.utils_constant import MAX_CHAR_LENGTH, MAX_NAME_LENGTH
 
-
+# 用户管理
 class User(AbstractBaseUser):
     user_id = models.BigAutoField(primary_key=True)
     name = models.CharField(max_length=MAX_NAME_LENGTH, unique=True)
@@ -24,7 +24,7 @@ class User(AbstractBaseUser):
     def __str__(self):
         return self.name
 
-
+# 好友关系
 class Friendship(models.Model):
     user_id = models.IntegerField()
     friend_user_id = models.IntegerField()
@@ -33,7 +33,7 @@ class Friendship(models.Model):
     class Meta:
         unique_together = ('user_id', 'friend_user_id')
 
-
+# 好友关系
 class FriendshipRequest(models.Model):
     user_id = models.IntegerField()
     friend_user_id = models.IntegerField()
@@ -41,3 +41,24 @@ class FriendshipRequest(models.Model):
 
     class Meta:
         unique_together = ('user_id', 'friend_user_id')
+        
+        
+# 群组
+class Group(models.Model):
+    group_id = models.IntergerField() # group id
+    group_name = models.CharField(max_length=MAX_NAME_LENGTH, unique=True) # group name
+    admin_id = models.IntegerField()  # group admin
+    update_time = models.DateTimeField(default=datetime.datetime.now)  # update time
+    
+    class Meta:
+        unique_together = ('group_id', 'group_name')
+    
+# 群组成员
+class GroupFriend(models.Model):
+    group_id = models.IntergerField() # group id
+    user_id = models.IntegerField()  # user id
+    update_time = models.DateTimeField(default=datetime.datetime.now)  # update time
+    
+    class Meta:
+        unique_together = ('group_id', 'user_id')
+    
