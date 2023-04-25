@@ -7,6 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.authtoken.models import Token
 
 from user.models import User, Friendship, FriendshipRequest, Group, GroupFriend
+from msg.models import PrivateConversation, GroupConversation
 from utils.utils_request import request_failed, request_success, return_field
 from utils.utils_require import CheckLogin, require
 from utils.utils_valid import *
@@ -448,3 +449,41 @@ class UserViewSet(viewsets.ViewSet):
         
         GroupFriend.objects.filter(group_id=group_id, friend_user_id=friend_id).delete()
         return request_success({"Deleted": True})
+    
+
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def get_private_conversations(self, req: HttpRequest):
+        user = get_user(req)
+        private_conversation_list = PrivateConversation.objects.filter(members__in=[user])
+        print(private_conversation_list)
+        return request_success()
+
+
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def get_or_create_private_conversation(self, req:HttpRequest):
+        user = get_user(req)
+        body = json.loads(req.body.decode('utf-8'))
+        friend_id = body.get('friend')
+        friend = User.objects.filter(user_id=friend_id).first()
+        if not friend:
+            return request_failed(2, "Friend does not exist")
+        friendship = Friendship.objects.filter(user_id=user.user_id, friend_user_id=friend_id).first()
+        if not friendship:
+            return request_failed(3, "You are not friends")
+        # Successful get
+        if PrivateConversation.objects.filter(members__in=[user, friend]).first():
+            conversation = PrivateConversation.objects.filter(members__in=[user, friend]).first()
+            return request_success({"conversation_id": conversation.conversation_id})
+        # Successful create
+        conversation = PrivateConversation.objects.create()
+        conversation.save()
+        conversation.members.add(user, friend)
+        return request_success({"conversation_id": conversation.conversation_id})
+
+
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def create_group_conversation(self, req:HttpRequest):
+        pass

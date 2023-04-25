@@ -3,7 +3,7 @@ import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from rest_framework.authtoken.models import Token
 from user.models import User
-from msg.models import Conversation, Message
+from msg.models import PrivateConversation, GroupConversation, Message
 from utils.utils_verify import *
 
 

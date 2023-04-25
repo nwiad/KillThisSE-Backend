@@ -2,10 +2,11 @@ from django.db import models
 
 import datetime
 
+from user.models import User
 from utils.utils_time import *
 from utils.utils_constant import MAX_CHAR_LENGTH
 
-class Conversation(models.Model):
+class AbstractConversation(models.Model):
     # 全局唯一的会话标志符
     conversation_id = models.BigAutoField(primary_key=True)
     # 会话名称
@@ -14,6 +15,16 @@ class Conversation(models.Model):
     create_time = models.DateTimeField(default=datetime.datetime.now)
     # 更新时间
     update_time = models.DateTimeField(default=datetime.datetime.now)
+    # 成员列表
+    members = models.ManyToManyField(User)
+
+
+class PrivateConversation(AbstractConversation):
+    pass
+
+
+class GroupConversation(AbstractConversation):
+    pass
 
 
 class Message(models.Model):
