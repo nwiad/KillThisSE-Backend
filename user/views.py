@@ -84,6 +84,8 @@ class UserViewSet(viewsets.ViewSet):
             'Your verification code is: ' + str(code),
             '--kill se',
             [email])
+        
+        return request_success({"send": True, "code_send": code})
     
     
     @action(detail=False, methods=["POST"])
@@ -91,13 +93,14 @@ class UserViewSet(viewsets.ViewSet):
         body = json.loads(req.body.decode("utf-8"))
         name = body.get("name")
         user = User.objects.filter(name=name).first()
-        
+
         if(check_code(user, body.get('code_input'))):
             # Successful Create
             return request_success({"Created": True})
         else:
             # 发一次验证码只能输入一次，输入错误就要重新发送验证码
             user.delete()
+            return request_failed(5, "Wrong verification code")
            
             
     @action(detail=False, methods=["POST"])

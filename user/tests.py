@@ -91,6 +91,7 @@ class UserViewTests(TestCase):
       
         
 # region register
+# 版本一 无邮箱验证
     # 正常注册
     def test_successful_user_registration(self):
         request_data = {
@@ -151,6 +152,65 @@ class UserViewTests(TestCase):
         
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, b'{"code": 0, "info": "Succeed", "Deleted": true}')
+
+# 版本2 有邮箱验证
+    # 发邮件
+    def test_send_email_for_register(self):
+        # Make a POST request to the send_email_for_register endpoint
+        data = {
+            'name': 'testuseree',
+            'password': 'testpasswordee',
+            'email': 'testuser@example.com'
+        }
+        response = self.client.post('/user/send_email_for_register/', data=data, content_type="application/json")
+
+        # Check that the response status code is 200 and the user was created with a code
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(User.objects.filter(name='testuseree').exists())
+        self.assertTrue(response.json()['send'])
+        self.assertEqual(User.objects.get(name='testuseree').user_code, response.json()['code_send'])
+
+    def test_register_success(self):
+        # Create a user in the database with a code
+        user = User.objects.create(
+            name='testuser22',
+            password=make_password('testpassword22'),
+            user_email='testuser@example.com',
+            user_code=123456
+        )
+
+        # Make a POST request to the register endpoint with the correct code
+        data = {
+            'name': 'testuser22',
+            'code_input': 123456
+        }
+        response = self.client.post('/user/register/', data=data, content_type="application/json")
+
+        # Check that the response status code is 200 and the user was successfully created
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'Created': True, 'code': 0, 'info': 'Succeed'})
+
+    def test_register_wrong_code(self):
+        # Create a user in the database with a code
+        user = User.objects.create(
+            name='testuser33',
+            password=make_password('testpassword33'),
+            user_email='testuser@example.com',
+            user_code=123456
+        )
+        data = {
+            'name': 'testuser33',
+            'code_input': '654321'
+        }
+        # Make a POST request to the register endpoint with the wrong code
+        response = self.client.post('/user/register/', data=data, content_type="application/json")
+        
+        # Check that the response status code is 200 and the user was deleted
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {'code': 5, 'info': 'Wrong verification code'})
+        # 创建失败，用户被删除
+        self.assertFalse(User.objects.filter(name='testuser33').exists())
+
 # endregion
 
 
