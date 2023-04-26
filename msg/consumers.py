@@ -44,6 +44,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             "messages": [
                 {
+                    "conversation_id": self.conversation_id,
                     "msg_body": message.msg_body,
                     "sender_id": message.sender_id,
                     "sender_name": (await User.objects.aget(user_id=sender_id)).name,
