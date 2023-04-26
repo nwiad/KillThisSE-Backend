@@ -1,7 +1,8 @@
 import json
 from django.test import TestCase, RequestFactory, Client
 from django.contrib.auth.hashers import make_password
-from user.models import User, FriendshipRequest, Group, GroupFriend
+from user.models import User, FriendshipRequest, Group, GroupFriend, Friendship
+from msg.models import Conversation, Message
 from user.views import UserViewSet
 from utils.utils_friends import isFriend, requestExists, addFriends, sendFriendRequest
 from django.urls import reverse
@@ -1021,4 +1022,82 @@ class UserViewTests(TestCase):
         self.assertFalse(group)
 # endregion
         
- 
+
+class ConversationTestCase(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user1 = User.objects.create(name='user1', password=make_password('password'))
+        self.user2 = User.objects.create(name='user2', password=make_password('password'))
+        self.user3 = User.objects.create(name='user3', password=make_password('password'))
+        self.user4 = User.objects.create(name='user4', password=make_password('password'))
+        addFriends(self.user1, self.user2)
+        addFriends(self.user1, self.user3)
+        self.conversation = Conversation.objects.create(is_Private=True)
+        self.conversation.members.add(self.user1, self.user2)
+
+    def test_get_private_conversations(self):
+        data = {
+            "name": "user1",
+            "password": "password"
+        }
+        response = login_someone(self, data)
+        token = response.json()["Token"]
+        data = {
+            "token": token
+        }
+        
+        url = '/user/get_private_conversations/'
+        self.client.post(url, data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {
+            'code': 0, 
+            'info': 'Succeed', 
+            'Logged in': True,
+            'Token': token
+        })
+
+    def test_get_or_create_private_conversation(self):
+        data = {
+            "name": "user1",
+            "password": "password"
+        }
+        response = login_someone(self, data)
+        token = response.json()["Token"]
+
+        data = {
+            "token": token,
+            'friend': self.user2.user_id
+        }
+        url = '/user/get_or_create_private_conversation/'
+        # Test successful get
+        response = self.client.post(url, data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {
+            'code': 0, 
+            'info': 'Succeed',
+            "conversation_id": self.conversation.conversation_id
+        })
+        
+        # Test successful create
+        response = self.client.post(url, {'friend': self.user3.user_id, "token": token},content_type="application/json")
+
+        self.assertEqual(response.status_code, 200)
+        conversation = Conversation.objects.filter(members__in=[self.user1], is_Private=True).filter(members__in=[self.user3]).first()
+        self.assertTrue(conversation is not None)
+        self.assertEqual(response.json(), {
+            'code': 0, 
+            'info': 'Succeed',
+            "conversation_id": conversation.conversation_id
+        })
+        # Test friend does not exist
+        response = self.client.post(url, {'friend': 999, "token": token},content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {
+            'code': 2, 'info': 'Friend does not exist'
+        })
+        # Test you are not friends
+        response = self.client.post(url, {'friend': self.user4.user_id, "token": token},content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {
+            'code': 3, 'info': 'You are not friends'
+        })
