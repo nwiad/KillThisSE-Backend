@@ -31,7 +31,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             # TODO: Add more info
             await self.disconnect()
         # Send message to current conversation
-        if not heartbeat or heartbeat == False:
+        if (heartbeat is None) or (heartbeat == False):
             await self.channel_layer.group_send(
                 str(self.conversation_id), {"type": "chat_message", "message": message, "sender": sender.user_id}
             )
@@ -47,6 +47,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "messages": [
                 {
                     "conversation_id": self.conversation_id,
+                    "msg_id": message.msg_id,
                     "msg_body": message.msg_body,
                     "sender_id": message.sender_id,
                     "sender_name": (await User.objects.aget(user_id=sender_id)).name,
