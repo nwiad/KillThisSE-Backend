@@ -277,141 +277,83 @@ class UserViewTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json(), {"code": 1, "info": "Not logged in"})
 
-    # def test_send_email_for_change_password(self):
-    #     # Mock the request
-    #     request = HttpRequest()
-    #     request.user = self.user
-    #     request.body = b'{"old_pwd": "12345678"}'
-    #     data = {
-    #         "old_pwd": "12345678"
-    #     }
-    #     response = self.client.post("/user/send_email_for_changepwd/", data=data, content_type="application/json")
-
-    #     # Check that the response is successful
-    #     self.assertEqual(response.status_code, 200)
-
-    #     # Check that the user's code has been updated
-    #     self.user.refresh_from_db()
-    #     self.assertIsNotNone(self.user.user_code)
+    def test_send_email_for_changepwd(self):
+        # Make a POST request to the send_email_for_changepwd endpoint
+        login_data = {
+            "name": "testuser", 
+            "password": "12345678"
+            }
+        response = login_someone(self, login_data)
+        token = response.json()["Token"]
         
-    #     # Check that the email was sent with the correct subject, message, and recipient
-    #     self.assertEqual(len(mail.outbox), 1)
-    #     self.assertEqual(mail.outbox[0].subject, 'Verification Code')
-    #     self.assertIn(str(self.user.user_code), mail.outbox[0].body)
-    #     self.assertEqual(mail.outbox[0].to, [self.user.user_email])
+        data = {
+            'old_pwd': '12345678',
+            "token": token
+        }
+        response = self.client.post('/user/send_email_for_changepwd/', 
+                                    data=data,
+                                    content_type="application/json")
+        # Check that the response status code is 200 and the user code was updated
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['Sent'])
+    
+    def test_reset_password(self):
+        # Make a POST request to the reset_password endpoint
+        login_data = {
+            "name": "testuser", 
+            "password": "12345678"
+            }
+        response = login_someone(self, login_data)
+        token = response.json()["Token"]
         
-    # def test_reset_password(self):
-    #     # log in
-    #     login_data = {
-    #         "name": "testuser", 
-    #         "password": "12345678"
-    #         }
-    #     response = login_someone(self, login_data)
-    #     token = response.json()["Token"]
+        user = User.objects.get(name="testuser")
+        data = {
+            'old_pwd': '12345678',
+            "token": token
+        }
+        # 假装填入了正确验证码
+        user.user_code = 123456
+        user.save()
+        data = {
+            'new_pwd': 'newpassword',
+            "token": token,
+            'code_input': 123456
+            }
+        response = self.client.post('/user/reset_password/', data=data, content_type="application/json")
         
-    #     self.assertEqual(response.status_code, 200)
+        # Check that the response status code is 200 and the user password was updated
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(User.objects.get(name='testuser').check_password('newpassword'))
         
-    #     user = User.objects.get(name="testuser")
-
-    #     # 修改密码失败 错误old
-    #     response = self.client.post(
-    #         RESETPW,
-    #         {
-    #             "old_pwd": "123428",
-    #             "new_pwd": "newpassword",
-    #             "token": token
-    #         },
-    #         content_type="application/json"
-    #     )
-    #     self.assertEqual(response.json(), {"code": 2, "info": "Wrong old password"})
+    def test_reset_password_correct_code(self):
+                # Make a POST request to the reset_password endpoint
+        login_data = {
+            "name": "testuser", 
+            "password": "12345678"
+            }
+        response = login_someone(self, login_data)
+        token = response.json()["Token"]
         
-    #     # 修改密码失败 错误new
-    #     response = self.client.post(
-    #         RESETPW,
-    #         {
-    #             "old_pwd": "12345678",
-    #             "new_pwd": "new",
-    #             "token": token
-    #         },
-    #         content_type="application/json"
-    #     )
-    #     self.assertEqual(response.json(), {"code": 3, "info": "Illegal new password"})
-
-    #     # 修改密码
-    #     response = self.client.post(
-    #         RESETPW,
-    #         {
-    #             "old_pwd": "12345678",
-    #             "new_pwd": "newpassword",
-    #             "token": token
-    #         },
-    #         content_type="application/json"
-    #     )
-    #     self.assertEqual(response.status_code, 200)
-
-    #     # 检查用户信息是否已经修改
-    #     user.refresh_from_db()
-    #     data = {
-    #         "token" : token
-    #     }
-    #      # 登出
-    #     response = self.client.post(reverse("user-logout"), json.dumps(data), content_type="application/json")
-    #     self.assertEqual(response.status_code, 200)
-    #     self.assertEqual(response.json(), {"code": 0, "info": "Succeed", "Logged out": True})
-
-    #     # 清除session 登录另一个用户需要换session！
-    #     self.client.cookies["session"] = "session_value3"
+        user = User.objects.get(name="testuser")
+        data = {
+            'old_pwd': '12345678',
+            "token": token
+        }
+        # 假装填入了错误验证码
+        user.user_code = 123488
+        user.save()
+        data = {
+            'new_pwd': 'newpassword',
+            "token": token,
+            'code_input': 123456
+            }
+        response = self.client.post('/user/reset_password/', data=data, content_type="application/json")
         
-        
-    #     # 旧密码登录失败
-    #     login_data = {
-    #         "name": "testuser", 
-    #         "password": "12345678"
-    #         }
-    #     response = login_try(self, login_data)
-    #     self.assertNotEqual(response.status_code, 200)
-        
-    #     self.client.cookies["session"] = "session_value4"
-        
-    #     # 新密码登录成功
-    #     login_data = {
-    #         "name": "testuser", 
-    #         "password": "newpassword"
-    #         }
-    #     response = login_someone(self, login_data)
-      
-    # def test_reset_password_correct_code(self):
-    #     # Set up the user's code and request data with a correct code
-    #     self.user.user_code = 123456
-    #     self.user.save()
-    #     request = HttpRequest()
-    #     request.user = self.user
-    #     request.body = b'{"code_input": "123456", "new_pwd": "newpass"}'
-
-    #     # Call the view's reset_password method
-    #     response = MyView.as_view({'post': 'reset_password'})(request)
-
-    #     # Check that the response is successful and that the user's password has been updated
-    #     self.assertEqual(response.status_code, 200)
-    #     self.user.refresh_from_db()
-    #     self.assertTrue(self.user.check_password('newpass'))
-
-    # def test_reset_password_wrong_code(self):
-    #     # Set up the user's code and request data with a wrong code
-    #     self.user.user_code = 123456
-    #     self.user.save()
-    #     request = HttpRequest()
-    #     request.user = self.user
-    #     request.body = b'{"code_input": "654321", "new_pwd": "newpass"}'
-
-    #     # Call the view's reset_password method
-    #     response = MyView.as_view({'post': 'reset_password'})(request)
-
-    #     # Check that the response is unsuccessful and that the user's password has not been updated
-    #     self.assertEqual(response.status_code, 400)
-    #     self.user.refresh_from_db()
-    #     self.assertFalse(self.user.check_password('newpass'))
-     
+        # Check that the response status code is 200 and the user password was updated
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(User.objects.get(name='testuser').check_password('12345678'))
+        self.assertFalse(User.objects.get(name='testuser').check_password('newpassword'))
+   
     def test_reset_avatar(self):
                 # log in
         login_data = {
@@ -1012,12 +954,10 @@ class UserViewTests(TestCase):
         self.assertEqual(response.json(), {"code": 0, "group_id": group.group_id, "info": "Succeed"})
         
         # 删除分组
-        response = self.client.post("/user/delete_group/", data = data, content_type="application/json")
-        print("!!!!!!!!!")
-        print(response.json())
+        response = self.client.post("/user/del_group/", data = data, content_type="application/json")
         self.assertEqual(response.status_code, 200)
         group = Group.objects.filter(group_name="test_group")
-        self.assertEqual(response.json(), {"code": 0, "info": "Succeed"})
+        self.assertEqual(response.json(), {'code': 0, 'info': 'Succeed', 'Deleted': True})
         self.assertFalse(group)
 # endregion
         
