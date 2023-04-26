@@ -32,16 +32,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.disconnect()
         # Send message to current conversation
         if (heartbeat is None) or (heartbeat == False):
+            await Message.objects.acreate(msg_body=message, conversation_id=self.conversation_id, sender_id=sender.user_id)
             await self.channel_layer.group_send(
                 str(self.conversation_id), {"type": "chat_message", "message": message, "sender": sender.user_id}
             )
 
     # Receive message
     async def chat_message(self, event):
-        sender_id = event["sender"]
-        message = event["message"]
-        await Message.objects.acreate(msg_body=message, conversation_id=self.conversation_id, sender_id=sender_id)
-
         # 向该会话的所有用户发送聊天信息
         await self.send(text_data=json.dumps({
             "messages": [
