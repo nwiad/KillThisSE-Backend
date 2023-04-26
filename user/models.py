@@ -42,7 +42,7 @@ class Friendship(models.Model):
     class Meta:
         unique_together = ('user_id', 'friend_user_id')
 
-# 好友关系
+# 好友请求
 class FriendshipRequest(models.Model):
     user_id = models.IntegerField()
     friend_user_id = models.IntegerField()
