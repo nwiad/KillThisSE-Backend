@@ -59,7 +59,7 @@ class Group(models.Model):
     admin_id = models.IntegerField()  # group admin
     update_time = models.DateTimeField(default=datetime.datetime.now)  # update time
 
-    def seralize(self):
+    def serialize(self):
         return {
             "group_id": self.group_id,
             "group_name": self.group_name,
