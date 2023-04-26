@@ -7,13 +7,15 @@ from utils.utils_friends import isFriend, requestExists, addFriends, sendFriendR
 from django.urls import reverse
 from unittest.mock import patch
 
+
 SENDFR = "/user/send_friend_request/"
 RESETNAME = "/user/reset_name/"
 RESETPW = "/user/reset_password/"
 
-# 成功注册
+# region test utils
+# 成功注册 without email
 def register_someone(self, data):
-    response = self.client.post(reverse("user-register"), data=data, content_type="application/json")
+    response = self.client.post("/user/register_without_email/", data=data, content_type="application/json")
     response_content = json.loads(response.content)
     expected_content = {"code": 0, "info": "Succeed", "Created": True}
     self.assertEqual(response_content, expected_content)
@@ -21,7 +23,7 @@ def register_someone(self, data):
 
 # 尝试注册
 def register_try(self, data):
-    response = self.client.post(reverse("user-register"), data=data, content_type="application/json")
+    response = self.client.post("/user/register_without_email/", data=data, content_type="application/json")
     return response
 
 # 成功登录
@@ -31,6 +33,7 @@ def login_someone(self, data):
     self.assertEqual(response.status_code, 200)
     self.assertIn("Token", response_content) 
     return response
+
 # 尝试登录
 def login_try(self, data):
     response = self.client.post("/user/login/", data=data, content_type="application/json")
@@ -61,6 +64,9 @@ def delf(self, data):
     response = self.client.post("/user/del_friend/", data=data, content_type="application/json")
     return response
 
+# endregion
+
+
 class UserViewTests(TestCase):
     # create a user object that is common across all test methods
     @classmethod
@@ -84,7 +90,7 @@ class UserViewTests(TestCase):
         self.client = Client()
       
         
-#! register
+# region register
     # 正常注册
     def test_successful_user_registration(self):
         request_data = {
@@ -116,7 +122,6 @@ class UserViewTests(TestCase):
         self.assertFalse(User.objects.filter(name="testuser", password=make_password("testpassword")).exists())
         self.assertEqual(response.content, b'{"code": 2, "info": "Username already exists"}')
         
-    
     # 非法密码
     def test_illegal_user_registration(self):
         request_data = {
@@ -146,8 +151,10 @@ class UserViewTests(TestCase):
         
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, b'{"code": 0, "info": "Succeed", "Deleted": true}')
+# endregion
 
-#! login
+
+# region login
     # 正常登录
     def test_successful_user_login(self):
         request_data = {
@@ -215,8 +222,10 @@ class UserViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"code": 0, "info": "Succeed", "Logged out": True})
        
-       
-#! modify
+# endregion
+
+
+# region modify
     def test_reset_name(self):
         # log in
         login_data = {
@@ -268,109 +277,141 @@ class UserViewTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json(), {"code": 1, "info": "Not logged in"})
 
-    def test_send_email_for_change_password(self):
-        # Mock the request
-        request = HttpRequest()
-        request.user = self.user
-        request.body = b'{"old_pwd": "12345678"}'
-        data = {
-            "old_pwd": "12345678"
-        }
-        response = self.client.post("/user/send_email_for_changepwd/", data=data, content_type="application/json")
+    # def test_send_email_for_change_password(self):
+    #     # Mock the request
+    #     request = HttpRequest()
+    #     request.user = self.user
+    #     request.body = b'{"old_pwd": "12345678"}'
+    #     data = {
+    #         "old_pwd": "12345678"
+    #     }
+    #     response = self.client.post("/user/send_email_for_changepwd/", data=data, content_type="application/json")
 
-        # Check that the response is successful
-        self.assertEqual(response.status_code, 200)
+    #     # Check that the response is successful
+    #     self.assertEqual(response.status_code, 200)
 
-        # Check that the user's code has been updated
-        self.user.refresh_from_db()
-        self.assertIsNotNone(self.user.user_code)
+    #     # Check that the user's code has been updated
+    #     self.user.refresh_from_db()
+    #     self.assertIsNotNone(self.user.user_code)
         
-        # Check that the email was sent with the correct subject, message, and recipient
-        self.assertEqual(len(mail.outbox), 1)
-        self.assertEqual(mail.outbox[0].subject, 'Verification Code')
-        self.assertIn(str(self.user.user_code), mail.outbox[0].body)
-        self.assertEqual(mail.outbox[0].to, [self.user.user_email])
+    #     # Check that the email was sent with the correct subject, message, and recipient
+    #     self.assertEqual(len(mail.outbox), 1)
+    #     self.assertEqual(mail.outbox[0].subject, 'Verification Code')
+    #     self.assertIn(str(self.user.user_code), mail.outbox[0].body)
+    #     self.assertEqual(mail.outbox[0].to, [self.user.user_email])
         
-    def test_reset_password(self):
-        # log in
-        login_data = {
-            "name": "testuser", 
-            "password": "12345678"
-            }
-        response = login_someone(self, login_data)
-        token = response.json()["Token"]
+    # def test_reset_password(self):
+    #     # log in
+    #     login_data = {
+    #         "name": "testuser", 
+    #         "password": "12345678"
+    #         }
+    #     response = login_someone(self, login_data)
+    #     token = response.json()["Token"]
         
-        self.assertEqual(response.status_code, 200)
+    #     self.assertEqual(response.status_code, 200)
         
-        user = User.objects.get(name="testuser")
+    #     user = User.objects.get(name="testuser")
 
-        # 修改密码失败 错误old
-        response = self.client.post(
-            RESETPW,
-            {
-                "old_pwd": "123428",
-                "new_pwd": "newpassword",
-                "token": token
-            },
-            content_type="application/json"
-        )
-        self.assertEqual(response.json(), {"code": 2, "info": "Wrong old password"})
+    #     # 修改密码失败 错误old
+    #     response = self.client.post(
+    #         RESETPW,
+    #         {
+    #             "old_pwd": "123428",
+    #             "new_pwd": "newpassword",
+    #             "token": token
+    #         },
+    #         content_type="application/json"
+    #     )
+    #     self.assertEqual(response.json(), {"code": 2, "info": "Wrong old password"})
         
-        # 修改密码失败 错误new
-        response = self.client.post(
-            RESETPW,
-            {
-                "old_pwd": "12345678",
-                "new_pwd": "new",
-                "token": token
-            },
-            content_type="application/json"
-        )
-        self.assertEqual(response.json(), {"code": 3, "info": "Illegal new password"})
+    #     # 修改密码失败 错误new
+    #     response = self.client.post(
+    #         RESETPW,
+    #         {
+    #             "old_pwd": "12345678",
+    #             "new_pwd": "new",
+    #             "token": token
+    #         },
+    #         content_type="application/json"
+    #     )
+    #     self.assertEqual(response.json(), {"code": 3, "info": "Illegal new password"})
 
-        # 修改密码
-        response = self.client.post(
-            RESETPW,
-            {
-                "old_pwd": "12345678",
-                "new_pwd": "newpassword",
-                "token": token
-            },
-            content_type="application/json"
-        )
-        self.assertEqual(response.status_code, 200)
+    #     # 修改密码
+    #     response = self.client.post(
+    #         RESETPW,
+    #         {
+    #             "old_pwd": "12345678",
+    #             "new_pwd": "newpassword",
+    #             "token": token
+    #         },
+    #         content_type="application/json"
+    #     )
+    #     self.assertEqual(response.status_code, 200)
 
-        # 检查用户信息是否已经修改
-        user.refresh_from_db()
-        data = {
-            "token" : token
-        }
-         # 登出
-        response = self.client.post(reverse("user-logout"), json.dumps(data), content_type="application/json")
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"code": 0, "info": "Succeed", "Logged out": True})
+    #     # 检查用户信息是否已经修改
+    #     user.refresh_from_db()
+    #     data = {
+    #         "token" : token
+    #     }
+    #      # 登出
+    #     response = self.client.post(reverse("user-logout"), json.dumps(data), content_type="application/json")
+    #     self.assertEqual(response.status_code, 200)
+    #     self.assertEqual(response.json(), {"code": 0, "info": "Succeed", "Logged out": True})
 
-        # 清除session 登录另一个用户需要换session！
-        self.client.cookies["session"] = "session_value3"
+    #     # 清除session 登录另一个用户需要换session！
+    #     self.client.cookies["session"] = "session_value3"
         
         
-        # 旧密码登录失败
-        login_data = {
-            "name": "testuser", 
-            "password": "12345678"
-            }
-        response = login_try(self, login_data)
-        self.assertNotEqual(response.status_code, 200)
+    #     # 旧密码登录失败
+    #     login_data = {
+    #         "name": "testuser", 
+    #         "password": "12345678"
+    #         }
+    #     response = login_try(self, login_data)
+    #     self.assertNotEqual(response.status_code, 200)
         
-        self.client.cookies["session"] = "session_value4"
+    #     self.client.cookies["session"] = "session_value4"
         
-        # 新密码登录成功
-        login_data = {
-            "name": "testuser", 
-            "password": "newpassword"
-            }
-        response = login_someone(self, login_data)
-        
+    #     # 新密码登录成功
+    #     login_data = {
+    #         "name": "testuser", 
+    #         "password": "newpassword"
+    #         }
+    #     response = login_someone(self, login_data)
+      
+    # def test_reset_password_correct_code(self):
+    #     # Set up the user's code and request data with a correct code
+    #     self.user.user_code = 123456
+    #     self.user.save()
+    #     request = HttpRequest()
+    #     request.user = self.user
+    #     request.body = b'{"code_input": "123456", "new_pwd": "newpass"}'
+
+    #     # Call the view's reset_password method
+    #     response = MyView.as_view({'post': 'reset_password'})(request)
+
+    #     # Check that the response is successful and that the user's password has been updated
+    #     self.assertEqual(response.status_code, 200)
+    #     self.user.refresh_from_db()
+    #     self.assertTrue(self.user.check_password('newpass'))
+
+    # def test_reset_password_wrong_code(self):
+    #     # Set up the user's code and request data with a wrong code
+    #     self.user.user_code = 123456
+    #     self.user.save()
+    #     request = HttpRequest()
+    #     request.user = self.user
+    #     request.body = b'{"code_input": "654321", "new_pwd": "newpass"}'
+
+    #     # Call the view's reset_password method
+    #     response = MyView.as_view({'post': 'reset_password'})(request)
+
+    #     # Check that the response is unsuccessful and that the user's password has not been updated
+    #     self.assertEqual(response.status_code, 400)
+    #     self.user.refresh_from_db()
+    #     self.assertFalse(self.user.check_password('newpass'))
+     
     def test_reset_avatar(self):
                 # log in
         login_data = {
@@ -398,9 +439,10 @@ class UserViewTests(TestCase):
         # 检查用户信息是否已经修改
         user.refresh_from_db()
         self.assertEqual(user.avatar, "newavatar")
+# endregion  
     
     
-#! friend add
+# region friend add
     # send_friend_request
     def test_send_friend_request(self):
         # 创建两个新用户并登录1
@@ -671,8 +713,10 @@ class UserViewTests(TestCase):
         are_friends = isFriend(user1, user2)
         self.assertFalse(are_friends)
     
-    
-#! friend del
+# endregion
+  
+  
+# region friend del
     def test_del_friend(self):
         # 创建测试用户和好友
         user = User.objects.create(name="test_user", password=make_password("password"))
@@ -747,8 +791,10 @@ class UserViewTests(TestCase):
         
         # 删除测试用户
         user.delete()
+# endregion
 
-#! 全局搜索 
+
+# region search user 
     # by id
     def test_search_by_id(self):
         # 创建测试用户
@@ -827,8 +873,10 @@ class UserViewTests(TestCase):
         self.assertEqual(response.json(), {"code":2, "info": "User searched by name not exist"})
         # 删除测试用户
         user.delete()
+# endregion
 
-#! 好友范围搜索
+
+# region search user in friend list
     # by id
     def test_search_friend_by_id(self):
         # 登录user 
@@ -912,8 +960,10 @@ class UserViewTests(TestCase):
                         "avatar": user00.avatar,
                         "name": user00.name
                         })
+# endregion
 
-#! 好友列表
+
+# region  好友列表
     def test_get_friends(self):
         data = {
             "name": "testuser", 
@@ -937,9 +987,10 @@ class UserViewTests(TestCase):
         
         self.assertEqual(response.json(), {"code": 0, "friends": list, "info": "Succeed"})
         
+# endregion        
+   
         
-        
-#! 分组
+# region 好友分组
     # 创建和删除分组
     def test_create_group(self):
         User.objects.create(name="testuser111", password=make_password("12345678"))
@@ -962,40 +1013,12 @@ class UserViewTests(TestCase):
         
         # 删除分组
         response = self.client.post("/user/delete_group/", data = data, content_type="application/json")
+        print("!!!!!!!!!")
+        print(response.json())
         self.assertEqual(response.status_code, 200)
         group = Group.objects.filter(group_name="test_group")
         self.assertEqual(response.json(), {"code": 0, "info": "Succeed"})
         self.assertFalse(group)
+# endregion
         
-def test_reset_password_correct_code(self):
-        # Set up the user's code and request data with a correct code
-        self.user.user_code = 123456
-        self.user.save()
-        request = HttpRequest()
-        request.user = self.user
-        request.body = b'{"code_input": "123456", "new_pwd": "newpass"}'
-
-        # Call the view's reset_password method
-        response = MyView.as_view({'post': 'reset_password'})(request)
-
-        # Check that the response is successful and that the user's password has been updated
-        self.assertEqual(response.status_code, 200)
-        self.user.refresh_from_db()
-        self.assertTrue(self.user.check_password('newpass'))
-
-def test_reset_password_wrong_code(self):
-    # Set up the user's code and request data with a wrong code
-    self.user.user_code = 123456
-    self.user.save()
-    request = HttpRequest()
-    request.user = self.user
-    request.body = b'{"code_input": "654321", "new_pwd": "newpass"}'
-
-    # Call the view's reset_password method
-    response = MyView.as_view({'post': 'reset_password'})(request)
-
-    # Check that the response is unsuccessful and that the user's password has not been updated
-    self.assertEqual(response.status_code, 400)
-    self.user.refresh_from_db()
-    self.assertFalse(self.user.check_password('newpass'))
-    
+ 

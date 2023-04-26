@@ -52,8 +52,6 @@ class UserViewSet(viewsets.ViewSet):
             user.save()
         return request_success({"Created": True})
 
-
-
     @action(detail=False, methods=["POST"])
     # 注册时向邮箱发送验证码
     def send_email_for_register(self, req: HttpRequest):
@@ -121,7 +119,6 @@ class UserViewSet(viewsets.ViewSet):
               
     @action(detail=False, methods=["POST"])
     def login(self, req: HttpRequest):
-        print("Hey, what's wrong???")
         body = json.loads(req.body.decode("utf-8"))
         name = body.get('name')
         password = body.get('password')
@@ -137,10 +134,10 @@ class UserViewSet(viewsets.ViewSet):
             Token.objects.filter(user=user).delete()
         
         # Successful login
-        print(user.user_id)
+        # print(user.user_id)
         token = Token.objects.update_or_create(user=user)
         token = Token.objects.get(user=user).key
-        print(token)
+        # print(token)
         return request_success({"Logged in": True, "Token": token})
         
           
@@ -424,14 +421,14 @@ class UserViewSet(viewsets.ViewSet):
     def del_group(self, req: HttpRequest):
         user = get_user(req)
         body = json.loads(req.body.decode("utf-8"))
-        group_id = body.get('group_id')
-        group = Group.objects.filter(group_id=group_id).first()
+        group_name = body.get('name')
+        group = Group.objects.filter(group_name=group_name).first()
         if not group:
             return request_failed(2, "Group not exist")
         if group.admin_id != user.user_id:
             return request_failed(3, "You are not admin of this group")
         
-        Group.objects.filter(group_id=group_id).delete()
+        Group.objects.filter(group_id=group.group_id).delete()
         return request_success({"Deleted": True})
 
     @action(detail=False, methods=["POST"])
@@ -463,7 +460,7 @@ class UserViewSet(viewsets.ViewSet):
         
         # 返回这个组内的所有好友
         group_friend_list = GroupFriend.objects.filter(group_id=group_id)
-        friend_id_list = [group_friend.friend_user_id for group_friend in group_friend_list]
+        friend_id_list = [group_friend.user_id for group_friend in group_friend_list]
         friend_list = [User.objects.filter(user_id=friend_id).first() for friend_id in friend_id_list]
 
         return_data = {
@@ -492,11 +489,11 @@ class UserViewSet(viewsets.ViewSet):
         if not friendship:
             return request_failed(4, "Friend not exist")
         
-        group_friend = GroupFriend.objects.filter(group_id=group_id, friend_user_id=friend_id)
+        group_friend = GroupFriend.objects.filter(group_id=group_id, user_id=friend_id)
         if group_friend:
             return request_failed(5, "Friend already in this group")
         
-        new_group_friend = GroupFriend.objects.create(group_id=group_id, friend_user_id=friend_id)
+        new_group_friend = GroupFriend.objects.create(group_id=group_id, user_id=friend_id)
         new_group_friend.save()
         return request_success({"Added": True})
     
@@ -518,11 +515,11 @@ class UserViewSet(viewsets.ViewSet):
         if not friendship:
             return request_failed(4, "Friend not exist")
         
-        group_friend = GroupFriend.objects.filter(group_id=group_id, friend_user_id=friend_id)
+        group_friend = GroupFriend.objects.filter(group_id=group_id, user_id=friend_id)
         if not group_friend:
             return request_failed(5, "Friend not in this group")
         
-        GroupFriend.objects.filter(group_id=group_id, friend_user_id=friend_id).delete()
+        GroupFriend.objects.filter(group_id=group_id, user_id=friend_id).delete()
         return request_success({"Deleted": True})
     
     @action(detail=False, methods=["POST"])
@@ -566,7 +563,7 @@ class UserViewSet(viewsets.ViewSet):
             return request_failed(3, "You are not friends")
         # Successful get
         if Conversation.objects.filter(members__in=[user], is_Private=True).filter(members__in=[friend]).first():
-            print("HI")
+            # print("HI")
             conversation = Conversation.objects.filter(members__in=[user], is_Private=True).filter(members__in=[friend]).first()
             return request_success({"conversation_id": conversation.conversation_id})
         # Successful create
