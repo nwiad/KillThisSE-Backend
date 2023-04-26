@@ -2,6 +2,7 @@ from django.db import models
 
 import datetime
 
+from user.models import User
 from utils.utils_time import *
 from utils.utils_constant import MAX_CHAR_LENGTH
 
@@ -14,6 +15,10 @@ class Conversation(models.Model):
     create_time = models.DateTimeField(default=datetime.datetime.now)
     # 更新时间
     update_time = models.DateTimeField(default=datetime.datetime.now)
+    # 私聊标志
+    is_Private = models.BooleanField(default=True)
+    # 成员列表
+    members = models.ManyToManyField(User)
 
 
 class Message(models.Model):

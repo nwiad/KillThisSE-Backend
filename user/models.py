@@ -10,6 +10,8 @@ from utils.utils_constant import MAX_CHAR_LENGTH, MAX_NAME_LENGTH
 class User(AbstractBaseUser):
     user_id = models.BigAutoField(primary_key=True)
     name = models.CharField(max_length=MAX_NAME_LENGTH, unique=True)
+    # last_login = models.DateTimeField(default=datetime.datetime.now)
+
     USERNAME_FIELD = "name"
     
     avatar = models.CharField(max_length=MAX_CHAR_LENGTH, default="https://github.com/LTNSXD/LTNSXD.github.io/blob/main/img/favicon.jpg?raw=true")

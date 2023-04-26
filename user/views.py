@@ -7,6 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.authtoken.models import Token
 
 from user.models import User, Friendship, FriendshipRequest, Group, GroupFriend
+from msg.models import Conversation
 from utils.utils_request import request_failed, request_success, return_field
 from utils.utils_require import CheckLogin, require
 from utils.utils_valid import *
@@ -89,15 +90,13 @@ class UserViewSet(viewsets.ViewSet):
         user.delete()
         return request_success({"Deleted": True})
 
-
     @action(detail=False, methods=["POST"])
     def auto_login(self, req: HttpRequest):
         if get_user(req):
             return request_success({"Logged in": True})
         else:
             return request_failed(1, "Not logged in yet")
-        
-        
+              
     @action(detail=False, methods=["POST"])
     def login(self, req: HttpRequest):
         print("Hey, what's wrong???")
@@ -249,8 +248,7 @@ class UserViewSet(viewsets.ViewSet):
         
         sendFriendRequest(user, friend)
         return request_success({"Send request": True})
-
-    
+ 
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def respond_friend_request(self, req: HttpRequest):
@@ -273,7 +271,6 @@ class UserViewSet(viewsets.ViewSet):
         elif response == "reject":
             requestExists(friend, user).delete()
             return request_success({"Become Friends": False})
-
         
     @action(detail=False, methods=["POST"])
     @CheckLogin
@@ -293,8 +290,7 @@ class UserViewSet(viewsets.ViewSet):
         Friendship.objects.filter(user_id=user.user_id, friend_user_id=friend_id).delete()
         Friendship.objects.filter(user_id=friend_id, friend_user_id=user.user_id).delete()
         return request_success({"Deleted": True})
-        
-    
+           
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def get_profile(self, req: HttpRequest):
@@ -302,8 +298,7 @@ class UserViewSet(viewsets.ViewSet):
 
         return_data = return_field(user.serialize(), ["user_id", "name", "avatar"])
         return request_success(return_data)
-    
-    
+       
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def search_by_id(self, req: HttpRequest):
@@ -317,7 +312,6 @@ class UserViewSet(viewsets.ViewSet):
         return_data = return_field(friend.serialize(), ["user_id", "name", "avatar"])
         return request_success(return_data)
     
-
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def search_by_name(self, req: HttpRequest):
@@ -331,7 +325,6 @@ class UserViewSet(viewsets.ViewSet):
         return_data = return_field(friend.serialize(), ["user_id", "name", "avatar"])
         return request_success(return_data)
     
-
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def get_friends(self, req: HttpRequest):
@@ -348,7 +341,6 @@ class UserViewSet(viewsets.ViewSet):
         }
         return request_success(return_data)
     
-
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def search_friend_by_id(self, req: HttpRequest):
@@ -365,8 +357,7 @@ class UserViewSet(viewsets.ViewSet):
         return_data = return_field(friend.serialize(), ["user_id", "name", "avatar"])
 
         return request_success(return_data)
-
-        
+       
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def search_friend_by_name(self, req: HttpRequest):
@@ -404,7 +395,7 @@ class UserViewSet(viewsets.ViewSet):
         new_group_id = new_group.group_id
         # 返回group_id
         return request_success({"group_id": new_group_id})
-    
+
     @action(detail=False, methods=["POST"])
     @CheckLogin
     # 删除分组
@@ -420,7 +411,7 @@ class UserViewSet(viewsets.ViewSet):
         
         Group.objects.filter(group_id=group_id).delete()
         return request_success({"Deleted": True})
-    
+
     @action(detail=False, methods=["POST"])
     @CheckLogin
     # 获取分组
@@ -511,3 +502,58 @@ class UserViewSet(viewsets.ViewSet):
         
         GroupFriend.objects.filter(group_id=group_id, friend_user_id=friend_id).delete()
         return request_success({"Deleted": True})
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def get_private_conversations(self, req: HttpRequest):
+        user = get_user(req)
+        private_conversation_list = Conversation.objects.filter(members__in=[user], is_Private=True)
+        # May be of little efficiency
+        r_member_list = [x.members.all() for x in private_conversation_list]
+        members = []
+        for member_list in r_member_list:
+            members += member_list
+        # deduplicate
+        members = list(set(members))
+        members.remove(user)
+        
+        return_data = {
+            "conversations": [ 
+                {
+                    "id": conversation.conversation_id,
+                    "friend_id": friend.user_id,
+                    "friend_name": friend.name,
+                    "friend_avatar": friend.avatar
+                }
+                for conversation, friend in zip(private_conversation_list, members)
+            ]
+        }
+        return request_success(return_data)
+
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def get_or_create_private_conversation(self, req: HttpRequest):
+        user = get_user(req)
+        body = json.loads(req.body.decode('utf-8'))
+        friend_id = body.get('friend')
+        friend = User.objects.filter(user_id=friend_id).first()
+        if not friend:
+            return request_failed(2, "Friend does not exist")
+        friendship = Friendship.objects.filter(user_id=user.user_id, friend_user_id=friend_id).first()
+        if not friendship:
+            return request_failed(3, "You are not friends")
+        # Successful get
+        if Conversation.objects.filter(members__in=[user], is_Private=True).filter(members__in=[friend]).first():
+            print("HI")
+            conversation = Conversation.objects.filter(members__in=[user], is_Private=True).filter(members__in=[friend]).first()
+            return request_success({"conversation_id": conversation.conversation_id})
+        # Successful create
+        conversation = Conversation.objects.create(is_Private=True)
+        conversation.save()
+        conversation.members.add(user, friend)
+        return request_success({"conversation_id": conversation.conversation_id})
+
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def create_group_conversation(self, req: HttpRequest):
+        pass
