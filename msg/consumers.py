@@ -11,6 +11,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.conversation_id = self.scope['url_route']['kwargs']['conversation_id']
         await self.channel_layer.group_add(str(self.conversation_id), self.channel_name)
+        await self.channel_layer.group_send(str(self.conversation_id), {"type": "chat_message"})
         await self.accept()
 
     async def disconnect(self, close_code):
@@ -34,7 +35,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if (heartbeat is None) or (heartbeat == False):
             await Message.objects.acreate(msg_body=message, conversation_id=self.conversation_id, sender_id=sender.user_id)
             await self.channel_layer.group_send(
-                str(self.conversation_id), {"type": "chat_message", "message": message, "sender": sender.user_id}
+                str(self.conversation_id), {"type": "chat_message"}
             )
 
     # Receive message
