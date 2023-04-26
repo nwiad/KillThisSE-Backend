@@ -47,12 +47,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "messages": [
                 {
                     "conversation_id": self.conversation_id,
-                    "msg_id": message.msg_id,
-                    "msg_body": message.msg_body,
-                    "sender_id": message.sender_id,
-                    "sender_name": (await User.objects.aget(user_id=sender_id)).name,
-                    "sender_avatar": (await User.objects.aget(user_id=sender_id)).avatar
+                    "msg_id": msg.msg_id,
+                    "msg_body": msg.msg_body,
+                    "sender_id": msg.sender_id,
+                    "sender_name": (await User.objects.aget(user_id=msg.sender_id)).name,
+                    "sender_avatar": (await User.objects.aget(user_id=msg.sender_id)).avatar
                 }
-                async for message in Message.objects.filter(conversation_id=self.conversation_id).all()
+                async for msg in Message.objects.filter(conversation_id=self.conversation_id).all()
             ]
         }))
