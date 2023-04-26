@@ -58,6 +58,14 @@ class Group(models.Model):
     group_name = models.CharField(max_length=MAX_NAME_LENGTH) # group name
     admin_id = models.IntegerField()  # group admin
     update_time = models.DateTimeField(default=datetime.datetime.now)  # update time
+
+    def seralize(self):
+        return {
+            "group_id": self.group_id,
+            "group_name": self.group_name,
+            "admin_id": self.admin_id,
+            "update_time": self.update_time
+        }
     
     class Meta:
         unique_together = ('group_id', 'group_name')
