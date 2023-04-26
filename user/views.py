@@ -31,7 +31,7 @@ def check_code(user, code):
         return False
 
 class UserViewSet(viewsets.ViewSet):
-#! 注册、登录、注销相关功能
+# region 注册、注销相关功能
     @action(detail=False, methods=["POST"])
     # 不用邮箱注册
     def register_without_email(self, req: HttpRequest):
@@ -84,6 +84,8 @@ class UserViewSet(viewsets.ViewSet):
             'Your verification code is: ' + str(code),
             '--kill se',
             [email])
+        
+        return request_success({"send": True, "code_send": code})
     
     
     @action(detail=False, methods=["POST"])
@@ -91,13 +93,14 @@ class UserViewSet(viewsets.ViewSet):
         body = json.loads(req.body.decode("utf-8"))
         name = body.get("name")
         user = User.objects.filter(name=name).first()
-        
+
         if(check_code(user, body.get('code_input'))):
             # Successful Create
             return request_success({"Created": True})
         else:
             # 发一次验证码只能输入一次，输入错误就要重新发送验证码
             user.delete()
+            return request_failed(5, "Wrong verification code")
            
             
     @action(detail=False, methods=["POST"])
@@ -109,13 +112,16 @@ class UserViewSet(viewsets.ViewSet):
         Token.objects.filter(key=token).delete()
         user.delete()
         return request_success({"Deleted": True})
+# endregion
 
+# region 登录、登出相关功能
     @action(detail=False, methods=["POST"])
     def auto_login(self, req: HttpRequest):
         if get_user(req):
             return request_success({"Logged in": True})
         else:
             return request_failed(1, "Not logged in yet")
+    
               
     @action(detail=False, methods=["POST"])
     def login(self, req: HttpRequest):
@@ -139,8 +145,8 @@ class UserViewSet(viewsets.ViewSet):
         token = Token.objects.get(user=user).key
         # print(token)
         return request_success({"Logged in": True, "Token": token})
-        
-          
+   
+              
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def logout(self, req: HttpRequest):
@@ -148,8 +154,9 @@ class UserViewSet(viewsets.ViewSet):
         token = body.get("token")
         Token.objects.filter(key=token).delete()
         return request_success({'Logged out': True})
+# endregion
 
-#! 修改个人信息相关功能        
+# region 修改个人信息相关功能        
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def reset_name(self, req: HttpRequest):
@@ -196,6 +203,7 @@ class UserViewSet(viewsets.ViewSet):
             'Your verification code is: ' + str(code),
             '--kill se',
             [email])
+        return request_success({"Sent": True, "code_sent":code})
     
     
     @action(detail=False, methods=["POST"])
@@ -224,8 +232,9 @@ class UserViewSet(viewsets.ViewSet):
         
         user.save()
         return request_success({"Modified": True})
+# endregion
 
-#! 加好友相关功能
+# region 加好友相关功能
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def get_friend_requests(self, req: HttpRequest):
@@ -309,6 +318,8 @@ class UserViewSet(viewsets.ViewSet):
         Friendship.objects.filter(user_id=user.user_id, friend_user_id=friend_id).delete()
         Friendship.objects.filter(user_id=friend_id, friend_user_id=user.user_id).delete()
         return request_success({"Deleted": True})
+
+# endregion
            
     @action(detail=False, methods=["POST"])
     @CheckLogin
@@ -317,7 +328,8 @@ class UserViewSet(viewsets.ViewSet):
 
         return_data = return_field(user.serialize(), ["user_id", "name", "avatar"])
         return request_success(return_data)
-       
+
+# region 搜好友相关功能    
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def search_by_id(self, req: HttpRequest):
@@ -396,8 +408,9 @@ class UserViewSet(viewsets.ViewSet):
         return_data = return_field(friend.serialize(), ["user_id", "name", "avatar"])
 
         return request_success(return_data)
+# endregion
 
-#! 分组相关功能
+# region 分组相关功能
     @action(detail=False, methods=["POST"])
     @CheckLogin
     # 创建分组
@@ -521,7 +534,8 @@ class UserViewSet(viewsets.ViewSet):
         
         GroupFriend.objects.filter(group_id=group_id, user_id=friend_id).delete()
         return request_success({"Deleted": True})
-    
+# endregion
+   
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def get_private_conversations(self, req: HttpRequest):
