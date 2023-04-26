@@ -33,6 +33,28 @@ def check_code(user, code):
 class UserViewSet(viewsets.ViewSet):
 #! 注册、登录、注销相关功能
     @action(detail=False, methods=["POST"])
+    # 不用邮箱注册
+    def register_without_email(self, req: HttpRequest):
+        body = json.loads(req.body.decode("utf-8"))
+
+        name = require(body, "name", "string", err_msg="Missing or error type of [name]")
+        password = require(body, "password", "string", err_msg="Missing or error type of [password]")
+
+        if not name_valid(name):
+            return request_failed(1, "Illegal username")
+        elif name_exist(name):
+            return request_failed(2, "Username already exists")    
+        elif not password_valid(password):
+            return request_failed(3, "Illegal password")        
+        else: # Successful Create
+            user = User(name=name)
+            user.set_password(password)
+            user.save()
+        return request_success({"Created": True})
+
+
+
+    @action(detail=False, methods=["POST"])
     # 注册时向邮箱发送验证码
     def send_email_for_register(self, req: HttpRequest):
         body = json.loads(req.body.decode("utf-8"))
