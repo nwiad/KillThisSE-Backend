@@ -548,7 +548,8 @@ class UserViewSet(viewsets.ViewSet):
             members += member_list
         # deduplicate
         members = list(set(members))
-        members.remove(user)
+        if user in members:
+            members.remove(user)
         
         return_data = {
             "conversations": [ 
@@ -579,6 +580,7 @@ class UserViewSet(viewsets.ViewSet):
         if Conversation.objects.filter(members__in=[user], is_Private=True).filter(members__in=[friend]).first():
             # print("HI")
             conversation = Conversation.objects.filter(members__in=[user], is_Private=True).filter(members__in=[friend]).first()
+            print(conversation.conversation_id)
             return request_success({"conversation_id": conversation.conversation_id})
         # Successful create
         conversation = Conversation.objects.create(is_Private=True)
