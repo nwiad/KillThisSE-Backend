@@ -21,6 +21,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         text_data_json = json.loads(text_data)
         message = text_data_json["message"]
         token = text_data_json["token"]
+        heartbeat = text_data_json.get("heartbeat")
         # Check_for_login
         if not token:
             # TODO: Add more info
@@ -30,9 +31,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
             # TODO: Add more info
             await self.disconnect()
         # Send message to current conversation
-        await self.channel_layer.group_send(
-            str(self.conversation_id), {"type": "chat_message", "message": message, "sender": sender.user_id}
-        )
+        if not heartbeat or heartbeat == False:
+            await self.channel_layer.group_send(
+                str(self.conversation_id), {"type": "chat_message", "message": message, "sender": sender.user_id}
+            )
 
     # Receive message
     async def chat_message(self, event):
