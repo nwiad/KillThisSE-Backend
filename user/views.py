@@ -473,8 +473,9 @@ class UserViewSet(viewsets.ViewSet):
         if not friendship:
             return request_failed(3, "You are not friends")
         # Successful get
-        if Conversation.objects.filter(members__in=[user, friend]).first():
-            conversation = Conversation.objects.filter(members__in=[user, friend], is_Private=True).first()
+        if Conversation.objects.filter(members__in=[user], is_Private=True).filter(members__in=[friend]).first():
+            print("HI")
+            conversation = Conversation.objects.filter(members__in=[user], is_Private=True).filter(members__in=[friend]).first()
             return request_success({"conversation_id": conversation.conversation_id})
         # Successful create
         conversation = Conversation.objects.create(is_Private=True)
