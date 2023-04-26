@@ -442,7 +442,7 @@ class UserViewSet(viewsets.ViewSet):
     @CheckLogin
     def get_private_conversations(self, req: HttpRequest):
         user = get_user(req)
-        private_conversation_list = Conversation.objects.filter(members__in=[user])
+        private_conversation_list = Conversation.objects.filter(members__in=[user], is_Private=True)
         # May be of little efficiency
         r_member_list = [x.members.all() for x in private_conversation_list]
         members = []
@@ -453,9 +453,14 @@ class UserViewSet(viewsets.ViewSet):
         members.remove(user)
         
         return_data = {
-            "conversations": [
-                return_field(friend.serialize(), ["user_id", "name", "avatar"])
-                for friend in members
+            "conversations": [ 
+                {
+                    "id": conversation.conversation_id,
+                    "friend_id": friend.user_id,
+                    "friend_name": friend.name,
+                    "friend_avatar": friend.avatar
+                }
+                for conversation, friend in zip(private_conversation_list, members)
             ]
         }
         return request_success(return_data)
