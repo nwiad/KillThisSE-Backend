@@ -1,7 +1,7 @@
 import json
 from django.http import HttpRequest
 from django.contrib.auth.hashers import make_password, check_password
-
+from django.core.mail import send_mail
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.authtoken.models import Token
@@ -12,35 +12,73 @@ from utils.utils_require import CheckLogin, require
 from utils.utils_valid import *
 from utils.utils_verify import *
 from utils.utils_friends import isFriend, requestExists, addFriends, sendFriendRequest
-
+import random
 
 def check_for_user_data(body):
     name = require(body, "name", "string", err_msg="Missing or error type of [name]")
     password = require(body, "password", "string", err_msg="Missing or error type of [password]")
-    
-    return name, password
+    email = require(body, "email", "string", err_msg="Missing or error type of [email]")
+    return name, password, email
+
+
+# 检查用户输入的验证码是否和之前发送的一致
+def check_code(user, code):
+    if user.user_code == code:
+        user.user_code = 0
+        return True
+    else:
+        return False
 
 class UserViewSet(viewsets.ViewSet):
 #! 注册、登录、注销相关功能
     @action(detail=False, methods=["POST"])
-    def register(self, req: HttpRequest):
+    # 注册时向邮箱发送验证码
+    def send_email_for_register(self, req: HttpRequest):
         body = json.loads(req.body.decode("utf-8"))
-
-        name, password = check_for_user_data(body)
-
+        
+        # 基本信息格式校验
+        name, password, email = check_for_user_data(body)
+        
         if not name_valid(name):
             return request_failed(1, "Illegal username")
         elif name_exist(name):
             return request_failed(2, "Username already exists")    
         elif not password_valid(password):
-            return request_failed(3, "Illegal password")        
-        else: # Successful Create
-            user = User(name=name)
-            user.set_password(password)
-            user.save()
-        return request_success({"Created": True})
-
-
+            return request_failed(3, "Illegal password")
+        elif not email_valid(email):
+            return request_failed(4, "Illegal email")        
+        
+        # 新建一个用户
+        user = User(name=name)
+        user.set_password(password)
+        user.user_email = email
+        # 生成六位数字验证码
+        code = random.randint(100000, 999999)
+        user.user_code = code
+        
+        user.save()
+        
+        send_mail(
+            'Verification Code',
+            'Your verification code is: ' + str(code),
+            '--kill se',
+            [email])
+    
+    
+    @action(detail=False, methods=["POST"])
+    def register(self, req: HttpRequest):
+        body = json.loads(req.body.decode("utf-8"))
+        name = body.get("name")
+        user = User.objects.filter(name=name).first()
+        
+        if(check_code(user, body.get('code_input'))):
+            # Successful Create
+            return request_success({"Created": True})
+        else:
+            # 发一次验证码只能输入一次，输入错误就要重新发送验证码
+            user.delete()
+           
+            
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def cancel_account(self, req: HttpRequest):
@@ -84,7 +122,7 @@ class UserViewSet(viewsets.ViewSet):
         print(token)
         return request_success({"Logged in": True, "Token": token})
         
-            
+          
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def logout(self, req: HttpRequest):
@@ -111,26 +149,51 @@ class UserViewSet(viewsets.ViewSet):
         user.save()
         return request_success({"Modified": True})
     
-
+        # 注册时向邮箱发送验证码
+    
+    
     @action(detail=False, methods=["POST"])
     @CheckLogin
-    def reset_password(self, req: HttpRequest):
+    # 为了修改密码 发送验证码
+    def send_email_for_changepwd(self, req: HttpRequest):
+        # 新的格式正确性校验
         body = json.loads(req.body.decode("utf-8"))
         user = get_user(req)
         old_password = body.get('old_pwd')
-        new_password = body.get('new_pwd')
 
-        if not check_password(old_password, user.password):
+        # 旧的密码正确性校验
+        if not user.check_password(old_password):
             return request_failed(2, "Wrong old password")
-
-        if not password_valid(new_password):
-            return request_failed(3, "Illegal new password")
-        else:
-            user.password = make_password(new_password)
+        
+        email = user.user_email
+        
+        # 生成六位数字验证码
+        code = random.randint(100000, 999999)
+        user.user_code = code
         
         user.save()
-        return request_success({"Modified": True})
+        
+        send_mail(
+            'Verification Code',
+            'Your verification code is: ' + str(code),
+            '--kill se',
+            [email])
     
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    # 输入验证码后点击的确认按钮
+    def reset_password(self, req: HttpRequest):
+        body = json.loads(req.body.decode("utf-8"))
+        new_password = body.get('new_pwd')
+        if check_code(get_user(req), body.get('code_input')):
+            user = get_user(req)
+            user.password = make_password(new_password)
+            user.save()
+            return request_success({"Modified": True})
+        else:
+            return request_failed(1, "Wrong verification code")
+
     
     @action(detail=False, methods=["POST"])
     @CheckLogin

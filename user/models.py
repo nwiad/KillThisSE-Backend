@@ -13,7 +13,14 @@ class User(AbstractBaseUser):
     USERNAME_FIELD = "name"
     
     avatar = models.CharField(max_length=MAX_CHAR_LENGTH, default="https://github.com/LTNSXD/LTNSXD.github.io/blob/main/img/favicon.jpg?raw=true")
-
+    
+    # 邮箱 
+    user_email = models.CharField(max_length=MAX_CHAR_LENGTH, default="")
+    # 手机号
+    user_phone = models.IntegerField(default=0)
+    # 验证码 每次登录都会销毁、更新
+    user_code = models.IntegerField(default=0)
+    
     def serialize(self):
         return {
             "user_id": self.user_id, 
@@ -45,8 +52,8 @@ class FriendshipRequest(models.Model):
         
 # 群组
 class Group(models.Model):
-    group_id = models.IntegerField() # group id
-    group_name = models.CharField(max_length=MAX_NAME_LENGTH, unique=True) # group name
+    group_id = models.BigAutoField(primary_key=True)
+    group_name = models.CharField(max_length=MAX_NAME_LENGTH) # group name
     admin_id = models.IntegerField()  # group admin
     update_time = models.DateTimeField(default=datetime.datetime.now)  # update time
     

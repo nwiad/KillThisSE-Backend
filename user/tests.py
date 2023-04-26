@@ -67,9 +67,14 @@ class UserViewTests(TestCase):
     def setUpTestData(cls):
         cls.user = User.objects.create(
             name = "testuser", 
-            password = make_password("12345678")
+            password = make_password("12345678"),
+            user_email = "2365269662@qq.com"
             )
-        user00 = User.objects.create(name="user000", password=make_password("password000"))
+        user00 = User.objects.create(
+            name="user000", 
+            password=make_password("password000"),
+            user_email = "2365269662@qq.com"
+            )
         addFriends(cls.user, user00)
         
         
@@ -192,8 +197,7 @@ class UserViewTests(TestCase):
         response = login_try(self, wp_data)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.content, b'{"code": 3, "info": "Wrong password"}')
-    
-    
+       
     # logout
     def test_successful_logout(self):
         # log in
@@ -264,6 +268,29 @@ class UserViewTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json(), {"code": 1, "info": "Not logged in"})
 
+    def test_send_email_for_change_password(self):
+        # Mock the request
+        request = HttpRequest()
+        request.user = self.user
+        request.body = b'{"old_pwd": "12345678"}'
+        data = {
+            "old_pwd": "12345678"
+        }
+        response = self.client.post("/user/send_email_for_changepwd/", data=data, content_type="application/json")
+
+        # Check that the response is successful
+        self.assertEqual(response.status_code, 200)
+
+        # Check that the user's code has been updated
+        self.user.refresh_from_db()
+        self.assertIsNotNone(self.user.user_code)
+        
+        # Check that the email was sent with the correct subject, message, and recipient
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].subject, 'Verification Code')
+        self.assertIn(str(self.user.user_code), mail.outbox[0].body)
+        self.assertEqual(mail.outbox[0].to, [self.user.user_email])
+        
     def test_reset_password(self):
         # log in
         login_data = {
@@ -940,4 +967,35 @@ class UserViewTests(TestCase):
         self.assertEqual(response.json(), {"code": 0, "info": "Succeed"})
         self.assertFalse(group)
         
-        
+def test_reset_password_correct_code(self):
+        # Set up the user's code and request data with a correct code
+        self.user.user_code = 123456
+        self.user.save()
+        request = HttpRequest()
+        request.user = self.user
+        request.body = b'{"code_input": "123456", "new_pwd": "newpass"}'
+
+        # Call the view's reset_password method
+        response = MyView.as_view({'post': 'reset_password'})(request)
+
+        # Check that the response is successful and that the user's password has been updated
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('newpass'))
+
+def test_reset_password_wrong_code(self):
+    # Set up the user's code and request data with a wrong code
+    self.user.user_code = 123456
+    self.user.save()
+    request = HttpRequest()
+    request.user = self.user
+    request.body = b'{"code_input": "654321", "new_pwd": "newpass"}'
+
+    # Call the view's reset_password method
+    response = MyView.as_view({'post': 'reset_password'})(request)
+
+    # Check that the response is unsuccessful and that the user's password has not been updated
+    self.assertEqual(response.status_code, 400)
+    self.user.refresh_from_db()
+    self.assertFalse(self.user.check_password('newpass'))
+    
