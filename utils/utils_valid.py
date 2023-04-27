@@ -21,3 +21,8 @@ def password_valid(password: str):
     """
     return re.match(r"^[a-zA-Z0-9_]{6,16}$" ,password) is not None
 
+def email_valid(email: str):
+    """
+    check if email valid
+    """
+    return re.match(r"^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)+$" ,email) is not None

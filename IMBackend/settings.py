@@ -26,6 +26,7 @@ SECRET_KEY = 'django-insecure-zsd1(jud4^7u1-^^vzb8@o1=^@_q55(owv0jip$_0&2u$cwc#3
 # SECURITY WARNING: don't run with debug turned on in production!
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
+
 if os.getenv('DEPLOY'):
     DEBUG = False
     DATABASES = {
@@ -38,6 +39,14 @@ if os.getenv('DEPLOY'):
             'PASSWORD': '123456'  # mysql的密码
         }
     }
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": ["redis://redis.KillThisSE.secoder.local:6379"],
+            },
+        },
+    }
 else:
     DEBUG = True
     DATABASES = {
@@ -45,6 +54,14 @@ else:
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
         }
+    }
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": ["redis://localhost:6379"],
+            },
+        },
     }
 
 ALLOWED_HOSTS = [
@@ -55,7 +72,9 @@ ALLOWED_HOSTS = [
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'user',
+    'msg',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -63,6 +82,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken',
+    'channels'
 ]
 
 MIDDLEWARE = [
@@ -95,6 +116,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'IMBackend.wsgi.application'
 
+ASGI_APPLICATION = 'IMBackend.asgi.application'
+
+AUTH_USER_MODEL = 'user.User'
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
@@ -155,3 +179,14 @@ REST_FRAMEWORK = {
 }
 
 APPEND_SLASH = False
+
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.163.com'  # SMTP服务器地址
+EMAIL_PORT = 25
+#发送邮件的邮箱
+EMAIL_HOST_USER = '15935695163@163.com'
+#在邮箱中设置的客户端授权密码
+EMAIL_HOST_PASSWORD = 'ESWSOKLOMQGYQLDQ'
+#收件人看到的发件人
+EMAIL_FROM = '杀软团队<15935695163@163.com>'

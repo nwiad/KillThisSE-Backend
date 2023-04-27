@@ -3,7 +3,7 @@ import json
 from functools import wraps
 
 from utils.utils_request import *
-from utils.utils_sessions import verify_session_id, get_session_id
+from rest_framework.authtoken.models import Token
 
 MAX_CHAR_LENGTH = 255
 
@@ -23,7 +23,11 @@ def CheckLogin(check_fn):
     @wraps(check_fn)
     def decorated(*args, **kwargs):
         req = args[1]
-        if verify_session_id(get_session_id(req)):
+        # print(req)
+        body = json.loads(req.body.decode("utf-8"))
+        token = body.get("token")
+        record = Token.objects.filter(key=token).first()
+        if record:
             return check_fn(*args, **kwargs)
         else:
             return request_failed(1, "Not logged in", 400)
