@@ -539,9 +539,11 @@ class UserViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def get_private_conversations(self, req: HttpRequest):
+        """
+        获取用户所有的私聊
+        """
         user = get_user(req)
         private_conversation_list = Conversation.objects.filter(members__in=[user], is_Private=True)
-        # May be of little efficiency
         r_member_list = [x.members.all() for x in private_conversation_list]
         members = []
         for member_list in r_member_list:
@@ -567,6 +569,9 @@ class UserViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def get_or_create_private_conversation(self, req: HttpRequest):
+        """
+        用户获取或创建与某一用户的私聊
+        """
         user = get_user(req)
         body = json.loads(req.body.decode('utf-8'))
         friend_id = body.get('friend')
@@ -591,4 +596,55 @@ class UserViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def create_group_conversation(self, req: HttpRequest):
+        """
+        用户创建群聊
+        """
         pass
+
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def get_group_conversations(self, req: HttpRequest):
+        """
+        用户获取所有群聊
+        """
+        user = get_user(req)
+        group_conversation_list = Conversation.objects.filter(members__in=[user], is_Private=False)
+        # To be modified
+        return_data = {
+            "conversations": [ 
+                {
+                    "id": conversation.conversation_id,
+                }
+                for conversation in group_conversation_list
+            ]
+        }
+        return request_success(return_data)
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def create_group_conversation(self, req: HttpRequest):
+        """
+        用户创建新的群聊
+        """
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        # To be modified
+        members: list = body.get("members")
+        # To be modified
+        for member_id in members:
+            member = User.objects.filter(user_id=member_id).first()
+            if not member:
+                return request_failed(2, "member not exist")
+            friendship = Friendship.objects.filter(user_id=user.user_id, friend_user_id=member_id).first()
+            if not friendship:
+                return request_failed(3, f"{member.name} is not your friend")
+        
+        # Successful create
+        conversation = Conversation.objects.create(is_Private=False)
+        conversation.save()
+        conversation.members.add(user)
+        for member_id in members:
+            member = User.objects.filter(user_id=member_id).first()
+            conversation.members.add(member)
+            
+        return request_success({"conversation_id": conversation.conversation_id})
