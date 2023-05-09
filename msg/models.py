@@ -19,6 +19,10 @@ class Conversation(models.Model):
     is_Private = models.BooleanField(default=True)
     # 成员列表
     members = models.ManyToManyField(User)
+    # 群主
+    admin = models.IntegerField(default=-1)
+    # 是否弃用
+    disabled = models.BooleanField(default=False)
 
 
 class Message(models.Model):

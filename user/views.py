@@ -593,14 +593,7 @@ class UserViewSet(viewsets.ViewSet):
         conversation.members.add(user, friend)
         return request_success({"conversation_id": conversation.conversation_id})
 
-    @action(detail=False, methods=["POST"])
-    @CheckLogin
-    def create_group_conversation(self, req: HttpRequest):
-        """
-        用户创建群聊
-        """
-        pass
-
+    # region 群聊相关功能
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def get_group_conversations(self, req: HttpRequest):
@@ -640,11 +633,48 @@ class UserViewSet(viewsets.ViewSet):
                 return request_failed(3, f"{member.name} is not your friend")
         
         # Successful create
-        conversation = Conversation.objects.create(is_Private=False)
+        conversation = Conversation.objects.create(is_Private=False, admin=user.user_id)
         conversation.save()
         conversation.members.add(user)
         for member_id in members:
             member = User.objects.filter(user_id=member_id).first()
             conversation.members.add(member)
-            
+
         return request_success({"conversation_id": conversation.conversation_id})
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def dismiss_group_conversation(self, req: HttpRequest):
+        """
+        用户解散群聊
+        """
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        conversation_id = body.get("group")
+        group_conversation = Conversation.objects.filter(conversation_id=conversation_id, is_Private=False).first()
+        if not group_conversation:
+            return request_failed(2, "Group not exist")
+        if group_conversation.admin != user.user_id:
+            return request_failed(3, "You are not the admin of this group")
+        group_conversation.delete()
+        return request_success({"Dismissed": True})
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def leave_group_conversation(self, req: HttpRequest):
+        """
+        用户退出群聊
+        """
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        conversation_id = body.get("group")
+        group_conversation = Conversation.objects.filter(conversation_id=conversation_id, is_Private=False).first()
+        if not group_conversation:
+            return request_failed(2, "Group not exist")
+        if user not in group_conversation.members.all():
+            return request_failed(3, "You are not in the group")
+        group_conversation.members.remove(user)
+        return request_success({"Left": True})
+    
+    
+    # endregion
