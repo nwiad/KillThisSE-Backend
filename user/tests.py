@@ -1101,3 +1101,37 @@ class ConversationTestCase(TestCase):
         self.assertEqual(response.json(), {
             'code': 3, 'info': 'You are not friends'
         })
+         
+    def create_group_conversation(self):
+        pass
+    
+    def get_group_conversations(self):
+        data = {
+            "name": "user1",
+            "password": "password"
+        }
+        response = login_someone(self, data)
+        token = response.json()["Token"]
+        data = {
+            "token": token
+        }
+        url = "/user/get_group_conversations/"
+        response = self.client.post(url, data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+    
+    def create_group_conversation(self):
+        data = {
+            "name": "user1",
+            "password": "password"
+        }
+        response = login_someone(self, data)
+        token = response.json()["Token"]
+        data = {
+            "token": token,
+            "members": [self.user2.user_id, self.user3.user_id]
+        }
+        
+        url = "/user/create_group_conversation/"
+        response = self.client.post(url, data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        
