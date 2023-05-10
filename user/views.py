@@ -30,6 +30,8 @@ def check_code(user, code):
     else:
         return False
 
+
+# 登录+一个  注册1
 class UserViewSet(viewsets.ViewSet):
 # region 注册、注销相关功能
     @action(detail=False, methods=["POST"])
@@ -53,6 +55,7 @@ class UserViewSet(viewsets.ViewSet):
         return request_success({"Created": True})
 
     @action(detail=False, methods=["POST"])
+    
     # 注册时向邮箱发送验证码
     def send_email_for_register(self, req: HttpRequest):
         body = json.loads(req.body.decode("utf-8"))
@@ -140,12 +143,51 @@ class UserViewSet(viewsets.ViewSet):
             Token.objects.filter(user=user).delete()
         
         # Successful login
-        # print(user.user_id)
         token = Token.objects.update_or_create(user=user)
         token = Token.objects.get(user=user).key
         # print(token)
         return request_success({"Logged in": True, "Token": token})
    
+    # 登录时 发送验证码
+    def send_email_for_login(self, req: HttpRequest):
+        body = json.loads(req.body.decode("utf-8"))
+        
+        # 基本信息格式校验
+        name = body.get('name')
+        email = body.get('email')
+        user = User.objects.filter(name=name).first()
+        # 生成六位数字验证码
+        code = random.randint(100000, 999999)
+        user.user_code = code
+        
+        user.save()
+        
+        send_mail(
+            'Verification Code',
+            'Your verification code is: ' + str(code),
+            '--kill se',
+            [email])
+        
+        return request_success({"send": True, "code_send": code})
+      
+    @action(detail=False, methods=["POST"])
+    def login_with_email(self, req: HttpRequest):
+        body = json.loads(req.body.decode("utf-8"))
+        name = body.get("name")
+        user = User.objects.filter(name=name).first()
+        
+        if(check_code(user, body.get('code_input'))):
+            if verify_user(user):
+                Token.objects.filter(user=user).delete()
+            # Successful login
+            token = Token.objects.update_or_create(user=user)
+            token = Token.objects.get(user=user).key
+            # print(token)
+            return request_success({"Logged in": True, "Token": token})
+        else:
+            # 发一次验证码只能输入一次，输入错误就要重新发送验证码
+            user.delete()
+            return request_failed(5, "Wrong verification code")
               
     @action(detail=False, methods=["POST"])
     @CheckLogin
@@ -326,7 +368,7 @@ class UserViewSet(viewsets.ViewSet):
     def get_profile(self, req: HttpRequest):
         user = get_user(req)
 
-        return_data = return_field(user.serialize(), ["user_id", "name", "avatar"])
+        return_data = return_field(user.serialize(), ["user_id", "name", "avatar","user_email"])
         return request_success(return_data)
 
 # region 搜好友相关功能    
