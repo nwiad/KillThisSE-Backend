@@ -27,7 +27,8 @@ class User(AbstractBaseUser):
         return {
             "user_id": self.user_id, 
             "name": self.name, 
-            "avatar": self.avatar
+            "avatar": self.avatar,
+            "user_email": self.user_email,
         }
     
     def __str__(self):

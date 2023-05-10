@@ -91,7 +91,6 @@ class UserViewTests(TestCase):
         self.client = Client()
       
         
-# region register
 # 版本一 无邮箱验证
     # 正常注册
     def test_successful_user_registration(self):
@@ -212,7 +211,6 @@ class UserViewTests(TestCase):
         # 创建失败，用户被删除
         self.assertFalse(User.objects.filter(name='testuser33').exists())
 
-# endregion
 
 
 # region login
@@ -769,6 +767,8 @@ class UserViewTests(TestCase):
         user.delete()
         friend.delete()
 
+# endregion
+
     def test_get_profile(self):
         # 创建测试用户
         user = User.objects.create(name="test_user", password=make_password("password"))
@@ -789,12 +789,13 @@ class UserViewTests(TestCase):
             "info": "Succeed",
             "user_id": user.user_id,
             "name": user.name,
-            "avatar": user.avatar
+            "avatar": user.avatar,
+            "user_email":user.user_email,
         })
         
         # 删除测试用户
         user.delete()
-# endregion
+
 
 
 # region search user 
