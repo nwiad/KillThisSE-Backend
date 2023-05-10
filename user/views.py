@@ -31,7 +31,6 @@ def check_code(user, code):
         return False
 
 
-# 登录+一个  注册1
 class UserViewSet(viewsets.ViewSet):
 # region 注册、注销相关功能
     @action(detail=False, methods=["POST"])
