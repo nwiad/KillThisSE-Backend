@@ -22,7 +22,9 @@ class Conversation(models.Model):
     # 成员列表
     members = models.ManyToManyField(User)
     # 群主
-    admin = models.IntegerField(default=-1)
+    owner = models.IntegerField(default=-1)
+    # 管理员
+    administrators = models.ManyToManyField(User)
     # 是否弃用
     disabled = models.BooleanField(default=False)
 

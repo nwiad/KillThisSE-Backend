@@ -677,7 +677,7 @@ class UserViewSet(viewsets.ViewSet):
                 return request_failed(3, f"{member.name} is not your friend")
         
         # Successful create
-        conversation = Conversation.objects.create(conversation_name=name, is_Private=False, admin=user.user_id)
+        conversation = Conversation.objects.create(conversation_name=name, is_Private=False, owner=user.user_id)
         conversation.save()
         conversation.members.add(user)
         for member_id in members:
@@ -698,8 +698,8 @@ class UserViewSet(viewsets.ViewSet):
         group_conversation = Conversation.objects.filter(conversation_id=conversation_id, is_Private=False).first()
         if not group_conversation:
             return request_failed(2, "Group not exist")
-        if group_conversation.admin != user.user_id:
-            return request_failed(3, "You are not the admin of this group")
+        if group_conversation.owner != user.user_id:
+            return request_failed(3, "You are not the owner of this group")
         group_conversation.delete()
         return request_success({"Dismissed": True})
     
@@ -719,4 +719,70 @@ class UserViewSet(viewsets.ViewSet):
             return request_failed(3, "You are not in the group")
         group_conversation.members.remove(user)
         return request_success({"Left": True})
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def transfer_owner(self, req: HttpRequest):
+        """
+        转让群主
+        """
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        conversation_id = body.get("group")
+        new_owner = body.get("owner")
+        group_conversation = Conversation.objects.filter(conversation_id=conversation_id, is_Private=False).first()
+        if not group_conversation:
+            return request_failed(2, "Group not exist")
+        if group_conversation.owner != user.user_id:
+            return request_failed(3, "You are not the owner of this group")
+        # successful transfer
+        group_conversation.owner = new_owner
+        return request_success({"transfered": True})
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def add_administrators(self, req: HttpRequest):
+        """
+        增加群聊管理员
+        """
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        conversation_id = body.get("group")
+        administrators: list = body.get("admins")
+        group_conversation = Conversation.objects.filter(conversation_id=conversation_id, is_Private=False).first()
+        if not group_conversation:
+            return request_failed(2, "Group not exist")
+        if group_conversation.owner != user.user_id:
+            return request_failed(3, "You are not the owner of this group")
+        # successful add
+        # TODO: make it robust
+        for admin_id in administrators:
+            admin = User.objects.filter(user_id=admin_id).first()
+            group_conversation.administrators.add(admin)
+
+        return request_success({"Added": True})
+
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def remove_administrator(self, req: HttpRequest):
+        """
+        删除群管理员
+        """
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        conversation_id = body.get("group")
+        admin_id = body.get("admin")
+        group_conversation = Conversation.objects.filter(conversation_id=conversation_id, is_Private=False).first()
+        if not group_conversation:
+            return request_failed(2, "Group not exist")
+        if group_conversation.owner != user.user_id:
+            return request_failed(3, "You are not the owner of this group")
+        admin = User.objects.get(user_id=admin_id).first()
+        if not admin:
+            return request_failed(4, "User not exist")
+        if admin not in group_conversation.administrators.all():
+            return request_failed(5, "The user is not an admin")
+        # Successful remove
+        group_conversation.administrators.remove(admin)
+        return request_success({"Removed": True})
     # endregion
