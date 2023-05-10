@@ -11,6 +11,8 @@ class Conversation(models.Model):
     conversation_id = models.BigAutoField(primary_key=True)
     # 会话名称
     conversation_name = models.CharField(max_length=MAX_CHAR_LENGTH)
+    # 会话头像
+    conversation_avatar = models.CharField(max_length=MAX_CHAR_LENGTH, default="https://github.com/LTNSXD/LTNSXD.github.io/blob/main/img/favicon.jpg?raw=true")
     # 创建时间
     create_time = models.DateTimeField(default=datetime.datetime.now)
     # 更新时间
