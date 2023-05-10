@@ -38,5 +38,7 @@ class Message(models.Model):
     sender_id = models.IntegerField()
     # 消息创建时间
     create_time = models.DateTimeField(default=datetime.datetime.now)
+    # 消息是否被撤回
+    is_withdraw = models.BooleanField(default=False)
     # 图片url
     image_url = models.CharField(max_length=MAX_CHAR_LENGTH, default=None, null=True)

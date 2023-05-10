@@ -24,6 +24,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         token = text_data_json["token"]
         heartbeat = text_data_json.get("heartbeat")
         image_url = text_data_json.get("image_url")  # 检查传入消息是否包含 image_url
+        withdraw_msg_id = text_data_json.get("withdraw_msg_id")  # 检查传入消息是否包含 withdraw
         # Check_for_login
         if not token:
             # TODO: Add more info
@@ -34,30 +35,38 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.disconnect()
         # Send message to current conversation
         if (heartbeat is None) or (heartbeat == False):
-            await Message.objects.acreate(
-                msg_body=message, 
-                conversation_id=self.conversation_id, 
-                sender_id=sender.user_id,
-                image_url=image_url,  # 将 image_url 存储在 Message 对象中
+            if withdraw_msg_id:
+                msg_to_withdraw = await Message.objects.aget(msg_id=withdraw_msg_id)
+                msg_to_withdraw.is_withdraw = True  # 将消息标记为已撤回
+                await msg_to_withdraw.save()
+                await self.channel_layer.group_send(
+                    str(self.conversation_id), {"type": "chat_message"}
                 )
-            await self.channel_layer.group_send(
-                str(self.conversation_id), {"type": "chat_message"}
-            )
+            else:  # 如果没有收到撤回消息的请求，则发送普通聊天消息
+                await Message.objects.acreate(
+                    msg_body=message, 
+                    conversation_id=self.conversation_id, 
+                    sender_id=sender.user_id,
+                    image_url=image_url,
+                )
+                await self.channel_layer.group_send(
+                    str(self.conversation_id), {"type": "chat_message"}
+                )
 
     # Receive message
     async def chat_message(self, event):
-        # 向该会话的所有用户发送聊天信息
-        await self.send(text_data=json.dumps({
-            "messages": [
-                {
+        messages = []
+        async for msg in Message.objects.filter(conversation_id=self.conversation_id).all():
+            if not msg.is_withdraw:  # 如果消息没有被撤回，则将其添加到消息列表中
+                messages.append({
                     "conversation_id": self.conversation_id,
                     "msg_id": msg.msg_id,
                     "msg_body": msg.msg_body,
                     "sender_id": msg.sender_id,
                     "sender_name": (await User.objects.aget(user_id=msg.sender_id)).name,
                     "sender_avatar": (await User.objects.aget(user_id=msg.sender_id)).avatar,
-                    "image_url": msg.image_url,  # 将 image_url 添加到消息中
-                }
-                async for msg in Message.objects.filter(conversation_id=self.conversation_id).all()
-            ]
-        }))
+                    "image_url": msg.image_url,
+                })
+            else:  # 如果消息已经被撤回，则将其从数据库中删除
+                await msg.delete()
+        await self.send(text_data=json.dumps({"messages": messages}))
