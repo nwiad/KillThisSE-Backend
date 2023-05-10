@@ -536,6 +536,7 @@ class UserViewSet(viewsets.ViewSet):
         return request_success({"Deleted": True})
 # endregion
    
+# region 聊天相关功能
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def get_private_conversations(self, req: HttpRequest):
@@ -543,7 +544,7 @@ class UserViewSet(viewsets.ViewSet):
         获取用户所有的私聊
         """
         user = get_user(req)
-        private_conversation_list = Conversation.objects.filter(members__in=[user], is_Private=True)
+        private_conversation_list = Conversation.objects.filter(members__in=[user], isPrivate=True)
         r_member_list = [x.members.all() for x in private_conversation_list]
         members = []
         for member_list in r_member_list:
@@ -573,8 +574,8 @@ class UserViewSet(viewsets.ViewSet):
         用户获取或创建与某一用户的私聊
         """
         user = get_user(req)
-        body = json.loads(req.body.decode('utf-8'))
-        friend_id = body.get('friend')
+        body = json.loads(req.body.decode("utf-8"))
+        friend_id = body.get("friend")
         friend = User.objects.filter(user_id=friend_id).first()
         if not friend:
             return request_failed(2, "Friend does not exist")
@@ -593,7 +594,6 @@ class UserViewSet(viewsets.ViewSet):
         conversation.members.add(user, friend)
         return request_success({"conversation_id": conversation.conversation_id})
 
-    # region 群聊相关功能
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def get_group_conversations(self, req: HttpRequest):
@@ -607,6 +607,8 @@ class UserViewSet(viewsets.ViewSet):
             "conversations": [ 
                 {
                     "id": conversation.conversation_id,
+                    "name": conversation.conversation_name,
+                    "avatar": conversation.conversation_avatar
                 }
                 for conversation in group_conversation_list
             ]
@@ -623,6 +625,7 @@ class UserViewSet(viewsets.ViewSet):
         body = json.loads(req.body.decode("utf-8"))
         # To be modified
         members: list = body.get("members")
+        name = body.get("name")
         # To be modified
         for member_id in members:
             member = User.objects.filter(user_id=member_id).first()
@@ -633,7 +636,7 @@ class UserViewSet(viewsets.ViewSet):
                 return request_failed(3, f"{member.name} is not your friend")
         
         # Successful create
-        conversation = Conversation.objects.create(is_Private=False, admin=user.user_id)
+        conversation = Conversation.objects.create(conversation_name=name, is_Private=False, admin=user.user_id)
         conversation.save()
         conversation.members.add(user)
         for member_id in members:
@@ -675,6 +678,4 @@ class UserViewSet(viewsets.ViewSet):
             return request_failed(3, "You are not in the group")
         group_conversation.members.remove(user)
         return request_success({"Left": True})
-    
-    
     # endregion
