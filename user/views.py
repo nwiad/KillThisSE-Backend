@@ -544,7 +544,7 @@ class UserViewSet(viewsets.ViewSet):
         获取用户所有的私聊
         """
         user = get_user(req)
-        private_conversation_list = Conversation.objects.filter(members__in=[user], isPrivate=True)
+        private_conversation_list = Conversation.objects.filter(members__in=[user], is_Private=True)
         r_member_list = [x.members.all() for x in private_conversation_list]
         members = []
         for member_list in r_member_list:
