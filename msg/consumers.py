@@ -23,7 +23,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
         message = text_data_json["message"]
         token = text_data_json["token"]
         heartbeat = text_data_json.get("heartbeat")
+        is_image = text_data_json.get("is_image")  # 检查传入消息是否包含 image_url
         image_url = text_data_json.get("image_url")  # 检查传入消息是否包含 image_url
+        is_file = text_data_json.get("is_file")  # 检查传入消息是否包含 image_url
+        file_url = text_data_json.get("file_url")  # 检查传入消息是否包含 image_url
+        
         withdraw_msg_id = text_data_json.get("withdraw_msg_id")  # 检查传入消息是否包含 withdraw
         # Check_for_login
         if not token:
@@ -48,6 +52,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     conversation_id=self.conversation_id, 
                     sender_id=sender.user_id,
                     image_url=image_url,
+                    is_image=is_image,
+                    is_file=is_file,
+                    file_url=file_url,
                 )
                 await self.channel_layer.group_send(
                     str(self.conversation_id), {"type": "chat_message"}
@@ -65,7 +72,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     "sender_id": msg.sender_id,
                     "sender_name": (await User.objects.aget(user_id=msg.sender_id)).name,
                     "sender_avatar": (await User.objects.aget(user_id=msg.sender_id)).avatar,
+                    "is_image": msg.is_image,
                     "image_url": msg.image_url,
+                    "is_file": msg.is_file,
+                    "file_url": msg.file_url,
                 })
             else:  # 如果消息已经被撤回，则将其从数据库中删除
                 await msg.delete()
