@@ -20,11 +20,11 @@ class Conversation(models.Model):
     # 私聊标志
     is_Private = models.BooleanField(default=True)
     # 成员列表
-    members = models.ManyToManyField(User)
+    members = models.ManyToManyField(User, related_name="conversation_members")
     # 群主
     owner = models.IntegerField(default=-1)
     # 管理员
-    administrators = models.ManyToManyField(User)
+    administrators = models.ManyToManyField(User, related_name="group_conversation_administrators")
     # 是否弃用
     disabled = models.BooleanField(default=False)
 
