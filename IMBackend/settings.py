@@ -36,7 +36,10 @@ if os.getenv('DEPLOY'):
             'HOST': 'database.KillThisSE.secoder.local',  # mysql的ip地址
             'PORT': 3306,  # mysql的端口
             'USER': 'root',  # mysql的用户名
-            'PASSWORD': '123456'  # mysql的密码
+            'PASSWORD': '123456',  # mysql的密码
+            'OPTIONS': {
+                'charset': 'utf8mb4'
+            }
         }
     }
     CHANNEL_LAYERS = {
