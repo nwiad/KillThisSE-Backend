@@ -165,7 +165,19 @@ class UserViewSet(viewsets.ViewSet):
         return request_success({"Modified": True})
     
         # 注册时向邮箱发送验证码
-      
+
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def reset_email(self, req: HttpRequest):
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        pwd = body.get("password")
+        new_email = body.get("email")
+        if not user.check_password(pwd):
+            return request_failed(2, "Wrong password")
+        user.user_email = new_email
+        return request_success({"Reset": True})
+        
     
     @action(detail=False, methods=["POST"])
     @CheckLogin
@@ -217,7 +229,6 @@ class UserViewSet(viewsets.ViewSet):
         }
         return request_success(return_data)
 
-    
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def send_friend_request(self, req: HttpRequest):
@@ -709,4 +720,17 @@ class UserViewSet(viewsets.ViewSet):
         # Successful remove
         group_conversation.administrators.remove(admin)
         return request_success({"Removed": True})
+
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def add_sticky_conversation(self, req: HttpRequest):
+        """
+        置顶聊天
+        """
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        conversation_id = body.get("group")
+        group_conversation = Conversation.objects.filter(conversation_id=conversation_id, is_Private=False).first()
+        if not group_conversation:
+            return request_failed(2, "Group not exist")
     # endregion

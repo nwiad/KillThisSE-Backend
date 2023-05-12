@@ -50,5 +50,5 @@ class Message(models.Model):
     is_file = models.BooleanField(default=False, null=True)
     # 文件url
     file_url = models.CharField(max_length=MAX_CHAR_LENGTH, default=None, null=True)
-    
-    # 引用别人
+    # 是否引用其他消息
+    quote_with = models.IntegerField(default=-1)
