@@ -5,6 +5,7 @@ from rest_framework.authtoken.models import Token
 from user.models import User
 from msg.models import Message
 from utils.utils_verify import *
+import pytz
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -67,6 +68,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
         messages = []
         async for msg in Message.objects.filter(conversation_id=self.conversation_id).all():
             if not msg.is_withdraw:  # 如果消息没有被撤回，则将其添加到消息列表中
+                if msg.create_time is not None:
+                    create_time = msg.create_time.astimezone(pytz.timezone('Asia/Shanghai')).strftime("%Y-%m-%d %H:%M:%S")
+                else:
+                    create_time = "N/A"  # or some other default value
                 messages.append({
                     "conversation_id": self.conversation_id,
                     "msg_id": msg.msg_id,
@@ -74,6 +79,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     "sender_id": msg.sender_id,
                     "sender_name": (await User.objects.aget(user_id=msg.sender_id)).name,
                     "sender_avatar": (await User.objects.aget(user_id=msg.sender_id)).avatar,
+                    "create_time": create_time,
                     "is_image": msg.is_image,
                     "image_url": msg.image_url,
                     "is_file": msg.is_file,
