@@ -29,6 +29,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         file_url = text_data_json.get("file_url")  # 检查传入消息是否包含 image_url
         
         withdraw_msg_id = text_data_json.get("withdraw_msg_id")  # 检查传入消息是否包含 withdraw
+        quote_with = text_data_json.get("quote_with") # 检查传入消息是否引用了其他消息
         # Check_for_login
         if not token:
             # TODO: Add more info
@@ -55,6 +56,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     is_image=is_image,
                     is_file=is_file,
                     file_url=file_url,
+                    quote_with=quote_with
                 )
                 await self.channel_layer.group_send(
                     str(self.conversation_id), {"type": "chat_message"}
