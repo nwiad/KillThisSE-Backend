@@ -52,58 +52,7 @@ class UserViewSet(viewsets.ViewSet):
             user.set_password(password)
             user.save()
         return request_success({"Created": True})
-
-    @action(detail=False, methods=["POST"])
     
-    # 注册时向邮箱发送验证码
-    def send_email_for_register(self, req: HttpRequest):
-        body = json.loads(req.body.decode("utf-8"))
-        
-        # 基本信息格式校验
-        name, password, email = check_for_user_data(body)
-        
-        if not name_valid(name):
-            return request_failed(1, "Illegal username")
-        elif name_exist(name):
-            return request_failed(2, "Username already exists")    
-        elif not password_valid(password):
-            return request_failed(3, "Illegal password")
-        elif not email_valid(email):
-            return request_failed(4, "Illegal email")        
-        
-        # 新建一个用户
-        user = User(name=name)
-        user.set_password(password)
-        user.user_email = email
-        # 生成六位数字验证码
-        code = random.randint(100000, 999999)
-        user.user_code = code
-        
-        user.save()
-        
-        send_mail(
-            'Verification Code',
-            'Your verification code is: ' + str(code),
-            '--kill se',
-            [email])
-        
-        return request_success({"send": True, "code_send": code})
-    
-    
-    @action(detail=False, methods=["POST"])
-    def register(self, req: HttpRequest):
-        body = json.loads(req.body.decode("utf-8"))
-        name = body.get("name")
-        user = User.objects.filter(name=name).first()
-
-        if(check_code(user, body.get('code_input'))):
-            # Successful Create
-            return request_success({"Created": True})
-        else:
-            # 发一次验证码只能输入一次，输入错误就要重新发送验证码
-            user.delete()
-            return request_failed(5, "Wrong verification code")
-           
             
     @action(detail=False, methods=["POST"])
     @CheckLogin
@@ -152,9 +101,8 @@ class UserViewSet(viewsets.ViewSet):
         body = json.loads(req.body.decode("utf-8"))
         
         # 基本信息格式校验
-        name = body.get('name')
         email = body.get('email')
-        user = User.objects.filter(name=name).first()
+        user = User.objects.filter(email=email).first()
         # 生成六位数字验证码
         code = random.randint(100000, 999999)
         user.user_code = code
@@ -171,9 +119,10 @@ class UserViewSet(viewsets.ViewSet):
       
     @action(detail=False, methods=["POST"])
     def login_with_email(self, req: HttpRequest):
+        # 只有邮箱和验证码
         body = json.loads(req.body.decode("utf-8"))
-        name = body.get("name")
-        user = User.objects.filter(name=name).first()
+        email = body.get('email')
+        user = User.objects.filter(email = email ).first()
         
         if(check_code(user, body.get('code_input'))):
             if verify_user(user):
@@ -181,11 +130,11 @@ class UserViewSet(viewsets.ViewSet):
             # Successful login
             token = Token.objects.update_or_create(user=user)
             token = Token.objects.get(user=user).key
-            # print(token)
+            user.user_code = 0
             return request_success({"Logged in": True, "Token": token})
         else:
             # 发一次验证码只能输入一次，输入错误就要重新发送验证码
-            user.delete()
+            user.user_code = 0
             return request_failed(5, "Wrong verification code")
               
     @action(detail=False, methods=["POST"])
@@ -232,8 +181,8 @@ class UserViewSet(viewsets.ViewSet):
     
     @action(detail=False, methods=["POST"])
     @CheckLogin
-    # 为了修改密码 发送验证码
-    def send_email_for_changepwd(self, req: HttpRequest):
+    # 输入验证码后点击的确认按钮
+    def reset_password(self, req: HttpRequest):
         # 新的格式正确性校验
         body = json.loads(req.body.decode("utf-8"))
         user = get_user(req)
@@ -242,35 +191,11 @@ class UserViewSet(viewsets.ViewSet):
         # 旧的密码正确性校验
         if not user.check_password(old_password):
             return request_failed(2, "Wrong old password")
-        
-        email = user.user_email
-        
-        # 生成六位数字验证码
-        code = random.randint(100000, 999999)
-        user.user_code = code
-        
-        user.save()
-        
-        send_mail(
-            'Verification Code',
-            'Your verification code is: ' + str(code),
-            '--kill se',
-            [email])
-        return request_success({"Sent": True, "code_sent":code})
-    
-    @action(detail=False, methods=["POST"])
-    @CheckLogin
-    # 输入验证码后点击的确认按钮
-    def reset_password(self, req: HttpRequest):
-        body = json.loads(req.body.decode("utf-8"))
-        new_password = body.get('new_pwd')
-        if check_code(get_user(req), body.get('code_input')):
-            user = get_user(req)
+        else:
+            new_password = body.get('new_pwd')
             user.password = make_password(new_password)
             user.save()
             return request_success({"Modified": True})
-        else:
-            return request_failed(1, "Wrong verification code")
 
     
     @action(detail=False, methods=["POST"])
