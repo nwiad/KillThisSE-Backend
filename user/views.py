@@ -785,4 +785,17 @@ class UserViewSet(viewsets.ViewSet):
         # Successful remove
         group_conversation.administrators.remove(admin)
         return request_success({"Removed": True})
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def add_sticky_conversation(self, req: HttpRequest):
+        """
+        置顶聊天
+        """
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        conversation_id = body.get("group")
+        group_conversation = Conversation.objects.filter(conversation_id=conversation_id, is_Private=False).first()
+        if not group_conversation:
+            return request_failed(2, "Group not exist")
     # endregion

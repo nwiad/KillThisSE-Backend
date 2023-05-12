@@ -51,4 +51,4 @@ class Message(models.Model):
     # 文件url
     file_url = models.CharField(max_length=MAX_CHAR_LENGTH, default=None, null=True)
     # 是否引用其他消息
-    quote_with = models.IntegerField()
+    quote_with = models.IntegerField(default=-1)
