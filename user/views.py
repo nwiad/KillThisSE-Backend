@@ -216,7 +216,19 @@ class UserViewSet(viewsets.ViewSet):
         return request_success({"Modified": True})
     
         # 注册时向邮箱发送验证码
-    
+
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def reset_email(self, req: HttpRequest):
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        pwd = body.get("password")
+        new_email = body.get("email")
+        if not user.check_password(pwd):
+            return request_failed(2, "Wrong password")
+        user.user_email = new_email
+        return request_success({"Reset": True})
+        
     
     @action(detail=False, methods=["POST"])
     @CheckLogin
@@ -245,7 +257,6 @@ class UserViewSet(viewsets.ViewSet):
             '--kill se',
             [email])
         return request_success({"Sent": True, "code_sent":code})
-    
     
     @action(detail=False, methods=["POST"])
     @CheckLogin
@@ -293,7 +304,6 @@ class UserViewSet(viewsets.ViewSet):
         }
         return request_success(return_data)
 
-    
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def send_friend_request(self, req: HttpRequest):
@@ -785,7 +795,7 @@ class UserViewSet(viewsets.ViewSet):
         # Successful remove
         group_conversation.administrators.remove(admin)
         return request_success({"Removed": True})
-    
+
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def add_sticky_conversation(self, req: HttpRequest):
