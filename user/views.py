@@ -722,6 +722,42 @@ class UserViewSet(viewsets.ViewSet):
         # Successful remove
         group_conversation.administrators.remove(admin)
         return request_success({"Removed": True})
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def set_group_announcement(self, req: HttpRequest):
+        """
+        群主或管理员设置群公告
+        """
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        group_id = body.get("group")
+        announcement: str = body.get("announcement")
+        group_conversation = Conversation.objects.filter(conversation_id=group_id, is_Private=False).first()
+        if not group_conversation:
+            return request_failed(2, "Group does not exist")
+        if (not user.user_id == group_conversation.owner) or (not user in group_conversation.administrators.all()):
+            return request_failed(3, "Permission denied")
+        group_conversation.announcement = announcement
+        group_conversation.save()
+        return request_success({"Set": True})
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def get_group_announcement(self, req: HttpRequest):
+        """
+        获取群公告
+        """
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        group_id = body.get("group")
+        group_conversation = Conversation.objects.filter(conversation_id=group_id, is_Private=False).first()
+        if not group_conversation:
+            return request_failed(2, "Group does not exist")
+        if not user in group_conversation.members.all():
+            return request_failed(3, "You are not in this group")
+        return_data = {"Announcement": group_conversation.announcement}
+        return request_success(return_data)
 
     @action(detail=False, methods=["POST"])
     @CheckLogin
