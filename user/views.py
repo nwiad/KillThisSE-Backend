@@ -97,6 +97,7 @@ class UserViewSet(viewsets.ViewSet):
         return request_success({"Logged in": True, "Token": token})
    
     # 登录时 发送验证码
+    @action(detail=False, methods=["POST"])
     def send_email_for_login(self, req: HttpRequest):
         body = json.loads(req.body.decode("utf-8"))
         
@@ -183,7 +184,6 @@ class UserViewSet(viewsets.ViewSet):
     
     @action(detail=False, methods=["POST"])
     @CheckLogin
-    # 输入验证码后点击的确认按钮
     def reset_password(self, req: HttpRequest):
         # 新的格式正确性校验
         body = json.loads(req.body.decode("utf-8"))
