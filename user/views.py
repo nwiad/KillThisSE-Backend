@@ -545,7 +545,8 @@ class UserViewSet(viewsets.ViewSet):
                     "id": conversation.conversation_id,
                     "friend_id": friend.user_id,
                     "friend_name": friend.name,
-                    "friend_avatar": friend.avatar
+                    "friend_avatar": friend.avatar,
+                    "is_Private": conversation.is_Privates
                 }
                 for conversation, friend in zip(private_conversation_list, members)
             ]
@@ -593,7 +594,8 @@ class UserViewSet(viewsets.ViewSet):
                 {
                     "id": conversation.conversation_id,
                     "name": conversation.conversation_name,
-                    "avatar": conversation.conversation_avatar
+                    "avatar": conversation.conversation_avatar,
+                    "is_Private": conversation.is_Private
                 }
                 for conversation in group_conversation_list
             ]
@@ -765,6 +767,16 @@ class UserViewSet(viewsets.ViewSet):
             return request_failed(3, "You are not in this group")
         return_data = {"Announcement": group_conversation.announcement}
         return request_success(return_data)
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def get_group_members(self, req: HttpRequest):
+        """
+        获取群聊的成员信息
+        """
+        body = json.loads(req.body.decode("utf-8"))
+
+    # endregion
 
     @action(detail=False, methods=["POST"])
     @CheckLogin
@@ -774,8 +786,8 @@ class UserViewSet(viewsets.ViewSet):
         """
         user = get_user(req)
         body = json.loads(req.body.decode("utf-8"))
-        conversation_id = body.get("group")
-        group_conversation = Conversation.objects.filter(conversation_id=conversation_id, is_Private=False).first()
-        if not group_conversation:
-            return request_failed(2, "Group not exist")
-    # endregion
+        conversation_id = body.get("conversation")
+        conversation = Conversation.objects.filter(conversation_id=conversation_id).first()
+        if not conversation:
+            return request_failed(2, "Conversation does not exist")
+
