@@ -865,6 +865,33 @@ class UserViewSet(viewsets.ViewSet):
     
     @action(detail=False, methods=["POST"])
     @CheckLogin
+    def get_group_administrators(self, req: HttpRequest):
+        """
+        获取群聊的所有管理员
+        """
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        group_id = body.get("group")
+        group_conversation = Conversation.objects.filter(conversation_id=group_id, is_Private=False).first()
+        if not group_conversation:
+            return request_failed(2, "Group does not exist")
+        if not user in group_conversation.members.all():
+            return request_failed(3, "You are not in this group")
+        admins = group_conversation.administrators.all()
+        return_data = {
+            "members": [
+                {
+                    "id": admin.user_id,
+                    "name": admin.name,
+                    "avatar": admin.avatar,
+                }
+                for admin in admins
+            ]
+        }
+        return request_success(return_data)
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
     def get_group_members(self, req: HttpRequest):
         """
         获取群聊的成员信息
