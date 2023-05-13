@@ -672,7 +672,7 @@ class UserViewSet(viewsets.ViewSet):
         group_conversation = Conversation.objects.filter(conversation_id=group_id, is_Private=False).first()
         if not group_conversation:
             return request_failed(2, "Group does not exist")
-        if (not user in group_conversation.administrators.all()) or (not user.user_id == group_conversation.owner):
+        if (not user in group_conversation.administrators.all()) and (not user.user_id == group_conversation.owner):
             return request_failed(3, "Permission denied")
         invitations = GroupInvitation.objects.filter(group_id=group_id)
         invitee_ids = [invitation.invitee_id for invitation in invitations]
@@ -707,7 +707,7 @@ class UserViewSet(viewsets.ViewSet):
         group_conversation = Conversation.objects.filter(conversation_id=group_id, is_Private=False).first()
         if not group_conversation:
             return request_failed(2, "group does not exist")
-        if (not user in group_conversation.administrators.all()) or (not user.user_id == group_conversation.owner):
+        if (not user in group_conversation.administrators.all()) and (not user.user_id == group_conversation.owner):
             return request_failed(3, "Permission denied")
         invitation_id = body.get("invitation")
         invitation = GroupInvitation.objects.filter(invitation_id=invitation_id).first()
@@ -840,7 +840,7 @@ class UserViewSet(viewsets.ViewSet):
         group_conversation = Conversation.objects.filter(conversation_id=group_id, is_Private=False).first()
         if not group_conversation:
             return request_failed(2, "Group does not exist")
-        if (not user.user_id == group_conversation.owner) or (not user in group_conversation.administrators.all()):
+        if (not user.user_id == group_conversation.owner) and (not user in group_conversation.administrators.all()):
             return request_failed(3, "Permission denied")
         group_conversation.announcement = announcement
         group_conversation.save()
