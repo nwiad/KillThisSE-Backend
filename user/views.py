@@ -1,7 +1,6 @@
 import json
 from django.http import HttpRequest
 from django.contrib.auth.hashers import make_password, check_password
-from celery import shared_task
 from django.core.mail import send_mail
 from rest_framework import viewsets
 from rest_framework.decorators import action
