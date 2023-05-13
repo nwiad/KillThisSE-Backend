@@ -17,7 +17,7 @@ class User(AbstractBaseUser):
     avatar = models.CharField(max_length=MAX_CHAR_LENGTH, default="https://github.com/LTNSXD/LTNSXD.github.io/blob/main/img/favicon.jpg?raw=true")
     
     # 邮箱 
-    user_email = models.CharField(max_length=MAX_CHAR_LENGTH, default="")
+    user_email = models.CharField(max_length=MAX_CHAR_LENGTH, default="2365269662@qq.com")
     # 手机号
     user_phone = models.IntegerField(default=0)
     # 验证码 每次登录都会销毁、更新

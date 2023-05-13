@@ -106,16 +106,16 @@ class UserViewSet(viewsets.ViewSet):
         user = User.objects.filter(user_email=email).first()
         # 生成六位数字验证码
         code = random.randint(100000, 999999)
-        user.user_code = code
-        
-        user.save()
         
         send_mail(
             'Verification Code',
             'Your verification code is: ' + str(code),
-            '--kill se',
+            '15935695163@163.com',
             [email])
         
+        user.user_code = code
+        
+        user.save()
         return request_success({"send": True, "code_send": code})
       
     @action(detail=False, methods=["POST"])
