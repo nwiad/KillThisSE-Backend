@@ -108,11 +108,10 @@ class UserViewSet(viewsets.ViewSet):
         user = User.objects.filter(user_email=email).first()
         # 生成六位数字验证码
         code = random.randint(100000, 999999)
-        
-        # 异步发送邮件        
+               
         send_mail(
-            'Verification Code',
-            'Your verification code is: ' + str(code),
+            'Verification Code --from SE2023 IM',
+            'You are try to login SE2023 IM.\nYour login verification code is: ' + str(code)+'\nIf you did not try to login, please ignore this email.\n\n--from KillthisSE2023 Team',
             '15935695163@163.com',
             [email])
         
