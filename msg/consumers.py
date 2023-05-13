@@ -26,8 +26,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
         heartbeat = text_data_json.get("heartbeat")
         is_image = text_data_json.get("is_image")  # 检查传入消息是否包含 image_url
         image_url = text_data_json.get("image_url")  # 检查传入消息是否包含 image_url
-        is_file = text_data_json.get("is_file")  # 检查传入消息是否包含 image_url
-        file_url = text_data_json.get("file_url")  # 检查传入消息是否包含 image_url
+        is_video = text_data_json.get("is_video")
+        video_url = text_data_json.get("video_url") 
+        is_file = text_data_json.get("is_file")
+        file_url = text_data_json.get("file_url")
+        is_audio = text_data_json.get("is_audio")
+        
         
         withdraw_msg_id = text_data_json.get("withdraw_msg_id")  # 检查传入消息是否包含 withdraw
         quote_with = text_data_json.get("quote_with") if text_data_json.get("quote_with") is not None else -1 # 检查传入消息是否引用了其他消息
@@ -55,7 +59,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     sender_id=sender.user_id,
                     image_url=image_url,
                     is_image=is_image,
+                    is_video=is_video,
                     is_file=is_file,
+                    is_audio=is_audio,
+                    video_url=video_url,
                     file_url=file_url,
                     quote_with=quote_with
                 )
@@ -69,7 +76,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         async for msg in Message.objects.filter(conversation_id=self.conversation_id).all():
             if not msg.is_withdraw:  # 如果消息没有被撤回，则将其添加到消息列表中
                 if msg.create_time is not None:
-                    create_time = msg.create_time.astimezone(pytz.timezone('Asia/Shanghai')).strftime("%Y-%m-%d %H:%M:%S")
+                    create_time = msg.create_time.astimezone(pytz.timezone('Asia/Shanghai')).strftime("%m-%d %H:%M")
                 else:
                     create_time = "N/A"  # or some other default value
                 messages.append({
@@ -84,6 +91,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     "image_url": msg.image_url,
                     "is_file": msg.is_file,
                     "file_url": msg.file_url,
+                    "is_audio": msg.is_audio,
+                    "is_video": msg.is_video,
                     "quote_with": msg.quote_with
                 })
             else:  # 如果消息已经被撤回，则将其从数据库中删除

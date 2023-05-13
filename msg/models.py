@@ -46,8 +46,14 @@ class Message(models.Model):
     is_image = models.BooleanField(default=False, null=True)
     # 图片url
     image_url = models.CharField(max_length=MAX_CHAR_LENGTH, default=None, null=True)
+    # 是否是视频消息
+    is_video = models.BooleanField(default=False, null=True)
+    # 视频url
+    video_url = models.CharField(max_length=MAX_CHAR_LENGTH, default=None, null=True)
     # 是否是文件消息
     is_file = models.BooleanField(default=False, null=True)
+    # 是否是音频消息
+    is_audio = models.BooleanField(default=False, null=True)
     # 文件url
     file_url = models.CharField(max_length=MAX_CHAR_LENGTH, default=None, null=True)
     # 是否引用其他消息
