@@ -774,7 +774,28 @@ class UserViewSet(viewsets.ViewSet):
         """
         获取群聊的成员信息
         """
+        user = get_user(req)
         body = json.loads(req.body.decode("utf-8"))
+        group_id = body.get("group")
+        group_conversation = Conversation.objects.filter(conversation_id=group_id, is_Private=False).first()
+        if not group_conversation:
+            return request_failed(2, "Group does not exist")
+        if not user in group_conversation.members.all():
+            return request_failed(3, "You are not in this group")
+        members = group_conversation.members.all()
+        return_data = {
+            "members": [
+                {
+                    "id": member.user_id,
+                    "name": member.name,
+                    "avatar": member.avatar,
+                    "is_admin": member in group_conversation.administrators.all(),
+                    "is_owner": member in group_conversation.owner.all()
+                }
+                for member in members
+            ]
+        }
+        return request_success(return_data)
 
     # endregion
 
