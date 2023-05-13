@@ -27,6 +27,8 @@ class Conversation(models.Model):
     administrators = models.ManyToManyField(User, related_name="group_conversation_administrators")
     # 是否弃用
     disabled = models.BooleanField(default=False)
+    # 群公告
+    announcement = models.CharField(max_length=MAX_CHAR_LENGTH)
 
 
 class Message(models.Model):
@@ -58,3 +60,5 @@ class Message(models.Model):
     file_url = models.CharField(max_length=MAX_CHAR_LENGTH, default=None, null=True)
     # 是否引用其他消息
     quote_with = models.IntegerField(default=-1)
+    # 已读成员列表
+    read_members = models.ManyToManyField(User, related_name="read_members")
