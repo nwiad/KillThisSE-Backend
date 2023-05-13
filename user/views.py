@@ -546,7 +546,7 @@ class UserViewSet(viewsets.ViewSet):
                     "friend_id": friend.user_id,
                     "friend_name": friend.name,
                     "friend_avatar": friend.avatar,
-                    "is_Private": conversation.is_Privates
+                    "is_Private": conversation.is_Private
                 }
                 for conversation, friend in zip(private_conversation_list, members)
             ]
