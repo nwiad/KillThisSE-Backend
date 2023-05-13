@@ -14,6 +14,7 @@ from utils.utils_valid import *
 from utils.utils_verify import *
 from utils.utils_friends import isFriend, requestExists, addFriends, sendFriendRequest
 import random
+import time
 
 def check_for_user_data(body):
     name = require(body, "name", "string", err_msg="Missing or error type of [name]")
@@ -116,6 +117,7 @@ class UserViewSet(viewsets.ViewSet):
             [email])
         
         user.user_code = code
+        user.user_code_created_time = time.time()
         
         user.save()
         return request_success({"send": True, "code_send": code})
@@ -128,6 +130,8 @@ class UserViewSet(viewsets.ViewSet):
         user = User.objects.filter(user_email = email).first()
         
         if(check_code(user, body.get('code_input'))):
+            if time.time() - user.user_code_created_time > 10: # 验证码有效期2分钟
+                return request_failed(6, "Expired verification code")
             if verify_user(user):
                 Token.objects.filter(user=user).delete()
             # Successful login

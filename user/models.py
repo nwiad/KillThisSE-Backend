@@ -22,6 +22,8 @@ class User(AbstractBaseUser):
     user_phone = models.IntegerField(default=0)
     # 验证码 每次登录都会销毁、更新
     user_code = models.IntegerField(default=0)
+    # 验证码创建的时间戳
+    user_code_created_time = models.FloatField(default=0)
     
     def serialize(self):
         return {
