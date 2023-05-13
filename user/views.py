@@ -130,7 +130,7 @@ class UserViewSet(viewsets.ViewSet):
         user = User.objects.filter(user_email = email).first()
         
         if(check_code(user, body.get('code_input'))):
-            if time.time() - user.user_code_created_time > 10: # 验证码有效期2分钟
+            if time.time() - user.user_code_created_time > 120: # 验证码有效期2分钟
                 return request_failed(6, "Expired verification code")
             if verify_user(user):
                 Token.objects.filter(user=user).delete()
