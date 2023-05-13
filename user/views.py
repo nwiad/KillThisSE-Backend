@@ -656,7 +656,7 @@ class UserViewSet(viewsets.ViewSet):
             return request_failed(5, "An invitation already exists")
         
         # Successful invite
-        invitation = GroupInvitation.objects.create(invitee_id=invitee_id, group_id=group_id)
+        invitation = GroupInvitation.objects.create(inviter_id=user.user_id, invitee_id=invitee_id, group_id=group_id)
         invitation.save()
         return request_success({"Invited": True})
 
@@ -675,17 +675,22 @@ class UserViewSet(viewsets.ViewSet):
         if (not user in group_conversation.administrators.all()) or (not user.user_id == group_conversation.owner):
             return request_failed(3, "Permission denied")
         invitations = GroupInvitation.objects.filter(group_id=group_id)
-        member_ids = [invitation.invitee_id for invitation in invitations]
-        members = [User.objects.filter(user_id=member_id).first() for member_id in member_ids]
+        invitee_ids = [invitation.invitee_id for invitation in invitations]
+        invitees = [User.objects.filter(user_id=invitee_id).first() for invitee_id in invitee_ids]
+        inviter_ids = [invitation.inviter_id for invitation in invitations]
+        inviters = [User.objects.filter(user_id=inviter_id).first() for inviter_id in inviter_ids]
         return_data = {
             "invitations": [
                 {
                     "invitation_id": invitation.invitation_id,
-                    "user_id": member.user_id,
-                    "name": member.name,
-                    "avatar": member.avatar
+                    "inviter_id": inviter.user_id,
+                    "inviter_name": inviter.name,
+                    "inviter_avatar": inviter.avatar,
+                    "invitee_id": invitee.user_id,
+                    "invitee_name": invitee.name,
+                    "invitee_avatar": invitee.avatar
                 }
-                for member, invitation in zip(members, invitations)
+                for invitee, inviter, invitation in zip(invitees, inviters, invitations)
             ]
         }
         return request_success(return_data)

@@ -86,6 +86,8 @@ class GroupFriend(models.Model):
 class GroupInvitation(models.Model):
     # 主键：id
     invitation_id = models.BigAutoField(primary_key=True)
+    # 邀请者id
+    inviter_id = models.IntegerField()
     # 被邀请者id
     invitee_id = models.IntegerField()
     # 群聊id
