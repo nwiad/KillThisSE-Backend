@@ -82,3 +82,17 @@ class GroupFriend(models.Model):
     class Meta:
         unique_together = ('group_id', 'user_id')
     
+# 群聊邀请
+class GroupInvitation(models.Model):
+    # 主键：id
+    invitation_id = models.BigAutoField(primary_key=True)
+    # 被邀请者id
+    invitee_id = models.IntegerField()
+    # 群聊id
+    group_id = models.IntegerField()
+    # 更新时间
+    update_time = models.DateTimeField(default=datetime.datetime.now)
+
+    class Meta:
+        unique_together = ('invitee_id', 'group_id')
+

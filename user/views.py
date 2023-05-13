@@ -6,7 +6,7 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.authtoken.models import Token
 
-from user.models import User, Friendship, FriendshipRequest, Group, GroupFriend
+from user.models import User, Friendship, FriendshipRequest, Group, GroupFriend, GroupInvitation
 from msg.models import Conversation
 from utils.utils_request import request_failed, request_success, return_field
 from utils.utils_require import CheckLogin, require
@@ -634,6 +634,94 @@ class UserViewSet(viewsets.ViewSet):
     
     @action(detail=False, methods=["POST"])
     @CheckLogin
+    def invite_member_to_group(self, req: HttpRequest):
+        """
+        用户邀请新用户进入群聊（需要得到群主/管理员的同意）
+        """
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        group_id = body.get("group")
+        group_conversation = Conversation.objects.filter(conversation_id=group_id, is_Private=False).first()
+        if not group_conversation:
+            return request_failed(2, "Group does not exist")
+        invitee_id = body.get("invitee")
+        invitee = User.objects.filter(user_id=invitee_id).first()
+        if not invitee:
+            return request_failed(3, "The user you tried to invite does not exist")
+        if invitee in group_conversation.members.all():
+            return request_failed(4, "User is already in the group")
+        
+        invitation = GroupInvitation.objects.filter(invitee_id=invitee_id, group_id=group_id)
+        if invitation is not None:
+            return request_failed(5, "An invitation already exists")
+        
+        # Successful invite
+        invitation = GroupInvitation.objects.create(invitee_id=invitee_id, group_id=group_id)
+        invitation.save()
+        return request_success({"Invited": True})
+
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def get_group_invitations(self, req: HttpRequest):
+        """
+        （群主/管理员）获取所有群聊邀请
+        """
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        group_id = body.get("group")
+        group_conversation = Conversation.objects.filter(conversation_id=group_id, is_Private=False).first()
+        if not group_conversation:
+            return request_failed(2, "Group does not exist")
+        if (not user in group_conversation.administrators.all()) or (not user.user_id == group_conversation.owner):
+            return request_failed(3, "Permission denied")
+        invitations = GroupInvitation.objects.filter(group_id=group_id)
+        member_ids = [invitation.invitee_id for invitation in invitations]
+        members = [User.objects.filter(user_id=member_id).first() for member_id in member_ids]
+        return_data = {
+            "invitations": [
+                {
+                    "invitation_id": invitation.invitation_id,
+                    "user_id": member.user_id,
+                    "name": member.name,
+                    "avatar": member.avatar
+                }
+                for member, invitation in zip(members, invitations)
+            ]
+        }
+        return request_success(return_data)
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def respond_group_invitation(self, req: HttpRequest):
+        """
+        （群主/管理员）回应进群邀请
+        """
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        group_id = body.get("group")
+        group_conversation = Conversation.objects.filter(conversation_id=group_id, is_Private=False).first()
+        if not group_conversation:
+            return request_failed(2, "group does not exist")
+        if (not user in group_conversation.administrators.all()) or (not user.user_id == group_conversation.owner):
+            return request_failed(3, "Permission denied")
+        invitation_id = body.get("invitation")
+        invitation = GroupInvitation.objects.filter(invitation_id=invitation_id).first()
+        if not invitation:
+            return request_failed(4, "Invitation does not exist")
+        response = body.get("response")
+        if response == "accept":
+            member_id = invitation.invitee_id
+            member = User.objects.filter(user_id=member_id).first()
+            group_conversation.members.add(member)
+            group_conversation.save()
+        elif response == "reject":
+            pass
+
+        invitation.delete()
+        return request_success({"Responded": True})
+
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
     def dismiss_group_conversation(self, req: HttpRequest):
         """
         用户解散群聊
@@ -683,6 +771,7 @@ class UserViewSet(viewsets.ViewSet):
             return request_failed(3, "You are not the owner of this group")
         # successful transfer
         group_conversation.owner = new_owner
+        group_conversation.save()
         return request_success({"transfered": True})
     
     @action(detail=False, methods=["POST"])
@@ -706,6 +795,7 @@ class UserViewSet(viewsets.ViewSet):
             admin = User.objects.filter(user_id=admin_id).first()
             group_conversation.administrators.add(admin)
 
+        group_conversation.save()
         return request_success({"Added": True})
 
     @action(detail=False, methods=["POST"])
@@ -790,7 +880,7 @@ class UserViewSet(viewsets.ViewSet):
                     "name": member.name,
                     "avatar": member.avatar,
                     "is_admin": member in group_conversation.administrators.all(),
-                    "is_owner": member in group_conversation.owner.all()
+                    "is_owner": member.user_id == group_conversation.owner
                 }
                 for member in members
             ]

@@ -37,5 +37,5 @@ class MsgViewSet(viewsets.ViewSet):
     
     @action(detail=False, methods=["POST"])
     @CheckLogin
-    def add_read_members(self, req: HttpRequest):
+    def add_read_member(self, req: HttpRequest):
         pass
