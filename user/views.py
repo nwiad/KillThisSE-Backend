@@ -103,7 +103,7 @@ class UserViewSet(viewsets.ViewSet):
         
         # 基本信息格式校验
         email = body.get('email')
-        user = User.objects.filter(email=email).first()
+        user = User.objects.filter(user_email=email).first()
         # 生成六位数字验证码
         code = random.randint(100000, 999999)
         user.user_code = code
@@ -123,7 +123,7 @@ class UserViewSet(viewsets.ViewSet):
         # 只有邮箱和验证码
         body = json.loads(req.body.decode("utf-8"))
         email = body.get('email')
-        user = User.objects.filter(email = email ).first()
+        user = User.objects.filter(user_email = email ).first()
         
         if(check_code(user, body.get('code_input'))):
             if verify_user(user):
