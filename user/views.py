@@ -173,9 +173,11 @@ class UserViewSet(viewsets.ViewSet):
         body = json.loads(req.body.decode("utf-8"))
         pwd = body.get("password")
         new_email = body.get("email")
+        print("new email: ", new_email)
         if not user.check_password(pwd):
             return request_failed(2, "Wrong password")
         user.user_email = new_email
+        user.save()
         return request_success({"Reset": True})
         
     
