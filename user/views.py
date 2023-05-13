@@ -1,6 +1,7 @@
 import json
 from django.http import HttpRequest
 from django.contrib.auth.hashers import make_password, check_password
+from celery import shared_task
 from django.core.mail import send_mail
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -24,12 +25,13 @@ def check_for_user_data(body):
 
 # 检查用户输入的验证码是否和之前发送的一致
 def check_code(user, code):
+    # 如果code的类型是string 转为数字
+    if type(code) == str:
+        code = int(code)
     if user.user_code == code:
-        user.user_code = 0
         return True
     else:
         return False
-
 
 class UserViewSet(viewsets.ViewSet):
 # region 注册、注销相关功能
@@ -107,6 +109,7 @@ class UserViewSet(viewsets.ViewSet):
         # 生成六位数字验证码
         code = random.randint(100000, 999999)
         
+        # 异步发送邮件        
         send_mail(
             'Verification Code',
             'Your verification code is: ' + str(code),
@@ -123,7 +126,7 @@ class UserViewSet(viewsets.ViewSet):
         # 只有邮箱和验证码
         body = json.loads(req.body.decode("utf-8"))
         email = body.get('email')
-        user = User.objects.filter(user_email = email ).first()
+        user = User.objects.filter(user_email = email).first()
         
         if(check_code(user, body.get('code_input'))):
             if verify_user(user):
@@ -132,10 +135,12 @@ class UserViewSet(viewsets.ViewSet):
             token = Token.objects.update_or_create(user=user)
             token = Token.objects.get(user=user).key
             user.user_code = 0
+            user.save()
             return request_success({"Logged in": True, "Token": token})
         else:
             # 发一次验证码只能输入一次，输入错误就要重新发送验证码
             user.user_code = 0
+            user.save()
             return request_failed(5, "Wrong verification code")
               
     @action(detail=False, methods=["POST"])
