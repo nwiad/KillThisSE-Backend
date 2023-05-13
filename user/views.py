@@ -857,7 +857,7 @@ class UserViewSet(viewsets.ViewSet):
         group_id = body.get("group")
         group_conversation = Conversation.objects.filter(conversation_id=group_id, is_Private=False).first()
         if not group_conversation:
-            return request_failed(2, "Group does not exist")
+            return request_failed(2, "What the hell happened??")
         if not user in group_conversation.members.all():
             return request_failed(3, "You are not in this group")
         return_data = {"Announcement": group_conversation.announcement}
