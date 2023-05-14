@@ -929,7 +929,7 @@ class UserViewSet(viewsets.ViewSet):
             return request_failed(2, "Group does not exist")
         if not user in group_conversation.members.all():
             return request_failed(3, "You are not in this group")
-        members = group_conversation.members.all()
+        members = list(group_conversation.members.all())
         # 不返回群主和管理员
         for member in members:
             if (member.user_id == group_conversation.owner) or (member in group_conversation.administrators.all()):
