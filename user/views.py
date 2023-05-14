@@ -919,7 +919,7 @@ class UserViewSet(viewsets.ViewSet):
     @CheckLogin
     def get_group_members(self, req: HttpRequest):
         """
-        获取群聊的成员信息
+        获取群聊的成员信息（不包括群主和管理员）
         """
         user = get_user(req)
         body = json.loads(req.body.decode("utf-8"))
@@ -930,14 +930,17 @@ class UserViewSet(viewsets.ViewSet):
         if not user in group_conversation.members.all():
             return request_failed(3, "You are not in this group")
         members = group_conversation.members.all()
+        # 不返回群主和管理员
+        for member in members:
+            if (member.user_id == group_conversation.owner) or (member in group_conversation.administrators.all()):
+                members.remove(member)
+
         return_data = {
             "members": [
                 {
                     "id": member.user_id,
                     "name": member.name,
                     "avatar": member.avatar,
-                    "is_admin": member in group_conversation.administrators.all(),
-                    "is_owner": member.user_id == group_conversation.owner
                 }
                 for member in members
             ]
