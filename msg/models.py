@@ -67,7 +67,7 @@ class Message(models.Model):
     # 已读成员列表
     read_members = models.ManyToManyField(User, related_name="read_members")
     # 删除该消息的成员列表
-    delete_members = models.ManyToManyField(User, related_name="delete_members",default=None, null=True)
+    delete_members = models.ManyToManyField(User, related_name="delete_members")
 
     def serialize(self):
         return {
