@@ -526,10 +526,10 @@ class UserViewSet(viewsets.ViewSet):
     @CheckLogin
     def get_private_conversations(self, req: HttpRequest):
         """
-        获取用户所有的私聊
+        获取用户所有的私聊（不包括置顶的）
         """
         user = get_user(req)
-        private_conversation_list = Conversation.objects.filter(members__in=[user], is_Private=True)
+        private_conversation_list = Conversation.objects.filter(members__in=[user], is_Private=True).exclude(sticky_members__in=[user])
         r_member_list = [x.members.all() for x in private_conversation_list]
         members = []
         for member_list in r_member_list:
@@ -584,10 +584,10 @@ class UserViewSet(viewsets.ViewSet):
     @CheckLogin
     def get_group_conversations(self, req: HttpRequest):
         """
-        用户获取所有群聊
+        用户获取所有群聊（不包括置顶的）
         """
         user = get_user(req)
-        group_conversation_list = Conversation.objects.filter(members__in=[user], is_Private=False)
+        group_conversation_list = Conversation.objects.filter(members__in=[user], is_Private=False).exclude(sticky_members__in=[user])
         # To be modified
         return_data = {
             "conversations": [ 
@@ -1003,21 +1003,24 @@ class UserViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["POST"])
     @CheckLogin
-    def add_sticky_conversation(self, req: HttpRequest):
+    def set_sticky_conversation(self, req: HttpRequest):
         """
-        置顶聊天
+        设置/取消置顶聊天
         """
         user = get_user(req)
         body = json.loads(req.body.decode("utf-8"))
         conversation_id = body.get("conversation")
+        sticky: str = body.get("sticky")
         conversation = Conversation.objects.filter(conversation_id=conversation_id).first()
         if not conversation:
             return request_failed(2, "Conversation does not exist")
         if user not in conversation.members.all():
             return request_failed(3, "You are not in this group")
-        # Successful stick
-        conversation.sticky_members.add(user)
-        return request_success({"Sticked": True})
+        if sticky == "True":
+            conversation.sticky_members.add(user)
+        elif user in conversation.sticky_members.all():
+            conversation.sticky_members.remove(user)
+        return request_success({"Revised": True})
     
     @action(detail=False, methods=["POST"])
     @CheckLogin
@@ -1025,7 +1028,51 @@ class UserViewSet(viewsets.ViewSet):
         """
         获取所有的置顶私聊
         """
-
+        user = get_user(req)
+        private_conversation_list = Conversation.objects.filter(members__in=[user], sticky_members__in=[user], is_Private=True)
+        r_member_list = [x.members.all() for x in private_conversation_list]
+        members = []
+        for member_list in r_member_list:
+            members += member_list
+        # deduplicate
+        members = list(set(members))
+        if user in members:
+            members.remove(user)
+        
+        return_data = {
+            "conversations": [ 
+                {
+                    "id": conversation.conversation_id,
+                    "friend_id": friend.user_id,
+                    "friend_name": friend.name,
+                    "friend_avatar": friend.avatar,
+                    "is_Private": conversation.is_Private
+                }
+                for conversation, friend in zip(private_conversation_list, members)
+            ]
+        }
+        return request_success(return_data)
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def get_sticky_group_conversations(self, req: HttpRequest):
+        """
+        获取所有的置顶群聊
+        """
+        user = get_user(req)
+        group_conversation_list = Conversation.objects.filter(members__in=[user], sticky_members__in=[user], is_Private=False)
+        return_data = {
+            "conversations": [ 
+                {
+                    "id": conversation.conversation_id,
+                    "name": conversation.conversation_name,
+                    "avatar": conversation.conversation_avatar,
+                    "is_Private": conversation.is_Private
+                }
+                for conversation in group_conversation_list
+            ]
+        }
+        return request_success(return_data)
 
     @action(detail=False, methods=["POST"])
     @CheckLogin
