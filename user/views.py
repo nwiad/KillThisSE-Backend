@@ -7,11 +7,11 @@ from rest_framework.decorators import action
 from rest_framework.authtoken.models import Token
 
 from user.models import User, Friendship, FriendshipRequest, Group, GroupFriend, GroupInvitation
-from msg.models import Conversation
+from msg.models import Conversation, Message
 from utils.utils_request import request_failed, request_success, return_field
 from utils.utils_require import CheckLogin, require
-from utils.utils_valid import *
-from utils.utils_verify import *
+from utils.utils_valid import name_valid, name_exist, password_valid, email_valid
+from utils.utils_verify import get_user, verify_user
 from utils.utils_friends import isFriend, requestExists, addFriends, sendFriendRequest
 import random
 import time
@@ -756,8 +756,37 @@ class UserViewSet(viewsets.ViewSet):
         if user not in group_conversation.members.all():
             return request_failed(3, "You are not in the group")
         group_conversation.members.remove(user)
+        if user in group_conversation.administrators.all():
+            group_conversation.administrators.remove(user)
+        # TODO: 群主退群???
         return request_success({"Left": True})
     
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def remove_member_from_group(self, req: HttpRequest):
+        """
+        （群主/管理员）将成员移出群聊
+        """
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        conversation_id = body.get("group")
+        member_id = body.get("member")
+        group_conversation = Conversation.objects.filter(conversation_id=conversation_id, is_Private=False).first()
+        member = User.objects.filter(user_id=member_id).first()
+        if not group_conversation:
+            return request_failed(2, "Group not exist")
+        if (not user.user_id == group_conversation.owner) and (not user in group_conversation.administrators.all()):
+            return request_failed(3, "Permission denied")
+        if (not user.user_id == group_conversation.owner) and member in group_conversation.administrators.all():
+            return request_failed(3, "Permission denied")
+        if member not in group_conversation.members.all():
+            return request_failed(4, "Member is not in the group")
+        group_conversation.members.remove(member)
+        # 撤销管理员身份
+        if member in group_conversation.administrators.all():
+            group_conversation.administrators.remove(member)
+        return request_success({"Removed": True})
+        
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def transfer_owner(self, req: HttpRequest):
@@ -980,3 +1009,30 @@ class UserViewSet(viewsets.ViewSet):
         if not conversation:
             return request_failed(2, "Conversation does not exist")
 
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def get_unread_messages(self, req: HttpRequest):
+        """
+        用户获取某一聊天的未读消息数
+        """
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        conversation_id = body.get("conversation")
+        conversation = Conversation.objects.filter(conversation_id=conversation_id).first()
+        if not conversation:
+            return request_failed(2, "Conversation does not exist")
+        msg_list = Message.objects.filter(conversation_id=conversation_id)
+        unread_msg_list = [msg for msg in msg_list if user not in msg.read_members.all()]
+        return request_success({"Unread Messages": len(unread_msg_list)})
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def set_unread_messages(self, req: HttpRequest):
+        """
+        设置已读的位置
+        """
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        conversation_id = body.get("conversation")
+        msg_id = body.get("msg_id")
+        msg_list = Message.objects.filter()
