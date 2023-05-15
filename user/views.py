@@ -344,7 +344,7 @@ class UserViewSet(viewsets.ViewSet):
         return request_success(return_data)
     
 
-    @action(detail=False, methods=["GET"])
+    @action(detail=False, methods=["POST"])
     @CheckLogin
     def get_friends(self, req: HttpRequest):
         user = get_user(req)
