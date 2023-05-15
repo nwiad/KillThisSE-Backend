@@ -31,6 +31,8 @@ class Conversation(models.Model):
     announcement = models.CharField(max_length=MAX_CHAR_LENGTH)
     # 置顶的成员列表
     sticky_members = models.ManyToManyField(User, related_name="sticky_members")
+    # 免打扰的成员列表
+    silent_members = models.ManyToManyField(User, related_name="silent_members")
 
 
 class Message(models.Model):
