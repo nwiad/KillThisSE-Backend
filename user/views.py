@@ -1130,7 +1130,7 @@ class UserViewSet(viewsets.ViewSet):
         if not conversation:
             return request_failed(2, "Conversation does not exist")
         silent: str = body.get("silent")
-        if silent == True:
+        if silent == "True":
             conversation.silent_members.add(user)
         elif user in conversation.silent_members.all():
             conversation.silent_members.remove(user)
