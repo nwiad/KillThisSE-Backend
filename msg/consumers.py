@@ -59,7 +59,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     self.conversation.mentioned_members.aadd(member)
 
             self.conversation.save()
-            new_message.asave()
+            new_message.save()
             return new_message
         
         text_data_json = json.loads(text_data)
