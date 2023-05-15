@@ -3,7 +3,7 @@ import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from rest_framework.authtoken.models import Token
 from user.models import User
-from msg.models import Message
+from msg.models import Message, Conversation
 from utils.utils_verify import *
 import pytz
 from asgiref.sync import sync_to_async
@@ -12,7 +12,9 @@ from asgiref.sync import sync_to_async
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.conversation_id = self.scope['url_route']['kwargs']['conversation_id']
-        # self.user_id = self.scope['url_route']['kwargs']['user_id']
+        self.user_id = self.scope['url_route']['kwargs']['user_id']
+        self.conversation = await Conversation.objects.aget(conversation_id=self.conversation_id)
+        self.user = await User.objects.aget(user_id=self.user_id)
         await self.channel_layer.group_add(str(self.conversation_id), self.channel_name)
         await self.channel_layer.group_send(str(self.conversation_id), {"type": "chat_message"})
         await self.accept()
@@ -55,6 +57,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             for member_id in mentioned_members:
                 member = User.objects.filter(user_id=member_id)
                 new_message.mentioned_members.aadd(member)
+                self.conversation.mentioned_members.aadd(member)
+
+            self.conversation.save()
             new_message.asave()
             return new_message
         
@@ -108,8 +113,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
         @sync_to_async
         def del_message():        
             return [one.user_id for one in msg.delete_members.all()]
+        
+        @sync_to_async
+        def get_mentioned_groups():
+            """
+            获取被mentioned的群聊
+            """
+            conversations = Conversation.objects.filter(is_Private=False, mentioned_members__in=[self.user]).all()
+            conversation_ids = [conversation.conversation_id for conversation in conversations]
+            return conversation_ids
+
             
         messages = []
+        mentioned_groups = await get_mentioned_groups()
         async for msg in Message.objects.filter(conversation_id=self.conversation_id).all():
             if msg.create_time is not None:
                 create_time = msg.create_time.astimezone(pytz.timezone('Asia/Shanghai')).strftime("%m-%d %H:%M")
@@ -132,6 +148,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 "is_audio": msg.is_audio,
                 "is_video": msg.is_video,
                 "quote_with": msg.quote_with,
-                "delete_members": deletemsgusers
+                "delete_members": deletemsgusers,
+                "mentioned_members": [member.user_id async for member in msg.mentioned_members.all()]
             })
-        await self.send(text_data=json.dumps({"messages": messages}))
+        await self.send(text_data=json.dumps({"messages": messages, "mentioned": mentioned_groups}))
