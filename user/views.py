@@ -787,8 +787,9 @@ class UserViewSet(viewsets.ViewSet):
                 return request_failed(5, "User does not exist")
             if (not user.user_id == group_conversation.owner) and member in group_conversation.administrators.all():
                 return request_failed(3, "Permission denied")
+            print(group_conversation.members.all())
             if member not in group_conversation.members.all():
-                return request_failed(4, "Member is not in the group")
+                return request_failed(4, f"{member.name} is not in the group")
             group_conversation.members.remove(member)
             # 撤销管理员身份
             if member in group_conversation.administrators.all():
