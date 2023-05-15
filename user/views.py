@@ -1027,7 +1027,7 @@ class UserViewSet(viewsets.ViewSet):
     
     @action(detail=False, methods=["POST"])
     @CheckLogin
-    def set_unread_messages(self, req: HttpRequest):
+    def set_read_message(self, req: HttpRequest):
         """
         设置已读的位置
         """
