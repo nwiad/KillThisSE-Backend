@@ -33,9 +33,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         @sync_to_async
         def delete_msg(deleted_msg_id,sender):
-            deleted_msg = Message.objects.get(msg_id=deleted_msg_id)
-            deleted_msg.msg_body = "[该消息已被删除]"
-            
+            deleted_msg = Message.objects.get(msg_id=deleted_msg_id)            
             deleted_msg.delete_members.add(sender)
             deleted_msg.save()
         
@@ -75,9 +73,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
         file_url = text_data_json.get("file_url")
         is_audio = text_data_json.get("is_audio")
         
+        
         deleted_msg_id = text_data_json.get("deleted_msg_id")
         withdraw_msg_id = text_data_json.get("withdraw_msg_id")  # 检查传入消息是否包含 withdraw
         quote_with = text_data_json.get("quote_with") if text_data_json.get("quote_with") is not None else -1 # 检查传入消息是否引用了其他消息
+        # 这条消息提到了谁 返回一个id的列表
         mentioned_members: list = text_data_json.get("mentioned_members")
         # Check_for_login
         if not token:
@@ -96,12 +96,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 )
             else :
                 if deleted_msg_id:  # 如果是一个删除
-                    print("Sent message!!!!!!!!!!!!!")
                     await delete_msg(deleted_msg_id, sender)
                     await self.channel_layer.group_send(
                         str(self.conversation_id), {"type": "chat_message"}
                     )
-                    print("Sent message!!!!!!!!!!!!!")
                 else:  # 如果不是一个删除操作 则发送普通聊天消息
                     await create_message()
                     await self.channel_layer.group_send(
@@ -126,6 +124,28 @@ class ChatConsumer(AsyncWebsocketConsumer):
             
         messages = []
         mentioned_groups = await get_mentioned_groups()
+        
+        
+        # 将获取会话成员的同步操作包装为异步函数
+        @sync_to_async
+        def get_members(conversation_id):
+            cov = Conversation.objects.filter(conversation_id=conversation_id).first()
+            members = []
+            for member in cov.members.all():
+                if member.user_id != nowpeople.user_id:
+                    members.append({
+                        "user_id": member.user_id,
+                        "user_name": member.name,
+                        "user_avatar": member.avatar
+                    })
+            return members
+        
+        
+        messages = []
+        members = []
+            
+        nowpeople = self.user
+        
         async for msg in Message.objects.filter(conversation_id=self.conversation_id).all():
             if msg.create_time is not None:
                 create_time = msg.create_time.astimezone(pytz.timezone('Asia/Shanghai')).strftime("%m-%d %H:%M")
@@ -133,6 +153,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 create_time = "N/A"  # or some other default value
         
             deletemsgusers = await del_message()
+            # 给前端传递的消息列表
             messages.append({
                 "conversation_id": self.conversation_id,
                 "msg_id": msg.msg_id,
@@ -151,4 +172,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 "delete_members": deletemsgusers,
                 "mentioned_members": [member.user_id async for member in msg.mentioned_members.all()]
             })
-        await self.send(text_data=json.dumps({"messages": messages, "mentioned": mentioned_groups}))
+        
+        # 获取本会话的所有成员
+        members = await get_members(self.conversation_id)
+        await self.send(text_data=json.dumps({"messages": messages, "members": members, "mentioned": mentioned_groups}))
