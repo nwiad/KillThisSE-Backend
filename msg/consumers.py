@@ -53,9 +53,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 quote_with=quote_with
             )
             for member_name in mentioned_members:
-                member = User.objects.filter(name=member_name)
-                new_message.mentioned_members.aadd(member)
-                self.conversation.mentioned_members.aadd(member)
+                if member_name is not None:
+                    member = User.objects.filter(name=member_name)
+                    new_message.mentioned_members.aadd(member)
+                    self.conversation.mentioned_members.aadd(member)
 
             self.conversation.save()
             new_message.asave()
