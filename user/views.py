@@ -343,7 +343,8 @@ class UserViewSet(viewsets.ViewSet):
         return_data = return_field(friend.serialize(), ["user_id", "name", "avatar"])
         return request_success(return_data)
     
-    @action(detail=False, methods=["POST"])
+
+    @action(detail=False, methods=["GET"])
     @CheckLogin
     def get_friends(self, req: HttpRequest):
         user = get_user(req)
