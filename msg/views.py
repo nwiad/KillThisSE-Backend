@@ -8,6 +8,7 @@ from utils.utils_require import CheckLogin, return_field
 from utils.utils_verify import get_user
 import base64
 from msg.models import Conversation, Message
+from user.models import User
 import requests
 import hashlib
 import time
@@ -55,6 +56,32 @@ class MsgViewSet(viewsets.ViewSet):
     def add_read_member(self, req: HttpRequest):
         pass
        
+       
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def withdraw_msg(self, req: HttpRequest):
+        body = json.loads(req.body.decode("utf-8"))
+        msg_id = body.get("msg")
+        msg = Message.objects.filter(msg_id=msg_id).first()
+        msg.is_withdraw = True
+        msg.save()
+        print("Message is withdraw: ")
+        return request_success()
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def delete_msg_by_one(self, req: HttpRequest):
+        body = json.loads(req.body.decode("utf-8"))
+        msg_id = body.get("msg")
+        user_id = body.get("user")
+        msg = Message.objects.filter(msg_id=msg_id).first()
+        user = User.objects.filter(user_id=user_id).first()
+        msg.delete_members.add(user)
+        msg.save()
+        print("Message is deleted by you successfully")
+        return request_success()
+    
+    
     def youdao_api_proxy(req):
         audio_file_path = "http://killthisse-avatar.oss-cn-beijing.aliyuncs.com/1684060999727recording.wav"
         lang_type = 'zh-CHS'

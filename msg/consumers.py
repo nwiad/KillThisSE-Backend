@@ -6,6 +6,7 @@ from user.models import User
 from msg.models import Message
 from utils.utils_verify import *
 import pytz
+from asgiref.sync import sync_to_async
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -20,6 +21,37 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     # Receive message from WebSocket
     async def receive(self, text_data):
+        @sync_to_async
+        def withdraw_message(withdraw_msg_id):
+            msg_to_withdraw = Message.objects.get(msg_id=withdraw_msg_id)
+            msg_to_withdraw.is_withdraw = True
+            msg_to_withdraw.msg_body = "[该消息已被撤回]"
+            msg_to_withdraw.save()
+
+        @sync_to_async
+        def delete_msg(deleted_msg_id,sender):
+            deleted_msg = Message.objects.get(msg_id=deleted_msg_id)
+            deleted_msg.msg_body = "[该消息已被删除]"
+            
+            deleted_msg.delete_members.add(sender)
+            deleted_msg.save()
+        
+        @sync_to_async
+        def create_message():
+            return Message.objects.create(
+                msg_body=message,
+                conversation_id=self.conversation_id,
+                sender_id=sender.user_id,
+                image_url=image_url,
+                is_image=is_image,
+                is_video=is_video,
+                is_file=is_file,
+                is_audio=is_audio,
+                video_url=video_url,
+                file_url=file_url,
+                quote_with=quote_with
+            )
+        
         text_data_json = json.loads(text_data)
         message = text_data_json["message"]
         token = text_data_json["token"]
@@ -32,7 +64,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         file_url = text_data_json.get("file_url")
         is_audio = text_data_json.get("is_audio")
         
-        
+        deleted_msg_id = text_data_json.get("deleted_msg_id")
         withdraw_msg_id = text_data_json.get("withdraw_msg_id")  # 检查传入消息是否包含 withdraw
         quote_with = text_data_json.get("quote_with") if text_data_json.get("quote_with") is not None else -1 # 检查传入消息是否引用了其他消息
         # Check_for_login
@@ -46,55 +78,53 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # Send message to current conversation
         if (heartbeat is None) or (heartbeat == False):
             if withdraw_msg_id:
-                msg_to_withdraw = await Message.objects.aget(msg_id=withdraw_msg_id)
-                msg_to_withdraw.is_withdraw = True  # 将消息标记为已撤回
-                await msg_to_withdraw.save()
+                await withdraw_message(withdraw_msg_id)
                 await self.channel_layer.group_send(
                     str(self.conversation_id), {"type": "chat_message"}
                 )
-            else:  # 如果没有收到撤回消息的请求，则发送普通聊天消息
-                await Message.objects.acreate(
-                    msg_body=message, 
-                    conversation_id=self.conversation_id, 
-                    sender_id=sender.user_id,
-                    image_url=image_url,
-                    is_image=is_image,
-                    is_video=is_video,
-                    is_file=is_file,
-                    is_audio=is_audio,
-                    video_url=video_url,
-                    file_url=file_url,
-                    quote_with=quote_with
-                )
-                await self.channel_layer.group_send(
-                    str(self.conversation_id), {"type": "chat_message"}
-                )
+            else :
+                if deleted_msg_id:  # 如果是一个删除
+                    print("Sent message!!!!!!!!!!!!!")
+                    await delete_msg(deleted_msg_id, sender)
+                    await self.channel_layer.group_send(
+                        str(self.conversation_id), {"type": "chat_message"}
+                    )
+                    print("Sent message!!!!!!!!!!!!!")
+                else:  # 如果不是一个删除操作 则发送普通聊天消息
+                    await create_message()
+                    await self.channel_layer.group_send(
+                        str(self.conversation_id), {"type": "chat_message"}
+                    )
 
     # Receive message
     async def chat_message(self, event):
+        @sync_to_async
+        def del_message():        
+            return [one.user_id for one in msg.delete_members.all()]
+            
         messages = []
         async for msg in Message.objects.filter(conversation_id=self.conversation_id).all():
-            if not msg.is_withdraw:  # 如果消息没有被撤回，则将其添加到消息列表中
-                if msg.create_time is not None:
-                    create_time = msg.create_time.astimezone(pytz.timezone('Asia/Shanghai')).strftime("%m-%d %H:%M")
-                else:
-                    create_time = "N/A"  # or some other default value
-                messages.append({
-                    "conversation_id": self.conversation_id,
-                    "msg_id": msg.msg_id,
-                    "msg_body": msg.msg_body,
-                    "sender_id": msg.sender_id,
-                    "sender_name": (await User.objects.aget(user_id=msg.sender_id)).name,
-                    "sender_avatar": (await User.objects.aget(user_id=msg.sender_id)).avatar,
-                    "create_time": create_time,
-                    "is_image": msg.is_image,
-                    "image_url": msg.image_url,
-                    "is_file": msg.is_file,
-                    "file_url": msg.file_url,
-                    "is_audio": msg.is_audio,
-                    "is_video": msg.is_video,
-                    "quote_with": msg.quote_with
-                })
-            else:  # 如果消息已经被撤回，则将其从数据库中删除
-                await msg.delete()
+            if msg.create_time is not None:
+                create_time = msg.create_time.astimezone(pytz.timezone('Asia/Shanghai')).strftime("%m-%d %H:%M")
+            else:
+                create_time = "N/A"  # or some other default value
+        
+            deletemsgusers = await del_message()
+            messages.append({
+                "conversation_id": self.conversation_id,
+                "msg_id": msg.msg_id,
+                "msg_body": msg.msg_body,
+                "sender_id": msg.sender_id,
+                "sender_name": (await User.objects.aget(user_id=msg.sender_id)).name,
+                "sender_avatar": (await User.objects.aget(user_id=msg.sender_id)).avatar,
+                "create_time": create_time,
+                "is_image": msg.is_image,
+                "image_url": msg.image_url,
+                "is_file": msg.is_file,
+                "file_url": msg.file_url,
+                "is_audio": msg.is_audio,
+                "is_video": msg.is_video,
+                "quote_with": msg.quote_with,
+                "delete_members": deletemsgusers
+            })
         await self.send(text_data=json.dumps({"messages": messages}))

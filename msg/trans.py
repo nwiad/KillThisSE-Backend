@@ -33,14 +33,21 @@ def do_request(data):
     return requests.post(YOUDAO_URL, data=data, headers=headers)
 
 def connect():
-    audio_file_path = "http://killthisse-avatar.oss-cn-beijing.aliyuncs.com/1684060999727recording.wav"
-    # audio_file_path = 'http://killthisse-avatar.oss-cn-beijing.aliyuncs.com/1683988188865recording.mp3'
-    lang_type = 'zh-CHS'
-    extension = audio_file_path[audio_file_path.rindex('.')+1:]
+    # audio_file_path = "C:\\Users\\LiJiaqi\\Downloads\\fromEdge\\1684129916253recording.wav"
+    path = "english.wav"
+    lang_type = 'en-GBR'
+    extension = path[path.rindex('.')+1:]
     if extension != 'wav':
         print('不支持的音频类型')
         sys.exit(1)
-    q = base64.b64encode(audio_file_path.encode('utf-8')).decode('utf-8')
+    # wav_info = wave.open(path, 'rb')
+    # sample_rate = wav_info.getframerate()
+    # nchannels = wav_info.getnchannels()
+    # wav_info.close()
+    with open(path, 'rb') as file_wav:
+        q = base64.b64encode(file_wav.read()).decode('utf-8')
+        print(q)
+    
     data = {}
     curtime = str(int(time.time()))
     data['curtime'] = curtime
