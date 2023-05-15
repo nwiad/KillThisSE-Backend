@@ -1022,7 +1022,7 @@ class UserViewSet(viewsets.ViewSet):
         if not conversation:
             return request_failed(2, "Conversation does not exist")
         msg_list = Message.objects.filter(conversation_id=conversation_id)
-        unread_msg_list = [msg for msg in msg_list if user not in msg.read_members.all()]
+        unread_msg_list = [msg for msg in msg_list if (user not in msg.read_members.all() and user.user_id != msg.sender_id)]
         return request_success({"Unread Messages": len(unread_msg_list)})
     
     @action(detail=False, methods=["POST"])
@@ -1034,5 +1034,14 @@ class UserViewSet(viewsets.ViewSet):
         user = get_user(req)
         body = json.loads(req.body.decode("utf-8"))
         conversation_id = body.get("conversation")
+        conversation = Conversation.objects.filter(conversation_id=conversation_id).first()
+        if not conversation:
+            return request_failed(2, "Conversation does not exist")
         msg_id = body.get("msg_id")
-        msg_list = Message.objects.filter()
+        msg_list = Message.objects.filter(conversation_id=conversation_id, msg_id__lte=msg_id)
+        if msg_list.first() is None:
+            return request_failed(3, "Message does not exist")
+        # 标记为已读
+        for msg in msg_list:
+            msg.read_members.add(user)
+        return request_success({"Set Read Messages": True})
