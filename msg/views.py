@@ -6,8 +6,23 @@ from rest_framework.authtoken.models import Token
 from utils.utils_request import request_failed, request_success
 from utils.utils_require import CheckLogin, return_field
 from utils.utils_verify import get_user
-
+import base64
 from msg.models import Conversation, Message
+import requests
+import hashlib
+import time
+import uuid
+
+def truncate(q):
+    if q is None:
+        return None
+    size = len(q)
+    return q if size <= 20 else q[0:10] + str(size) + q[size-10:size]
+
+def encrypt(signStr):
+    hash_algorithm = hashlib.sha256()
+    hash_algorithm.update(signStr.encode('utf-8'))
+    return hash_algorithm.hexdigest() 
 
 class MsgViewSet(viewsets.ViewSet):
     """
@@ -39,3 +54,32 @@ class MsgViewSet(viewsets.ViewSet):
     @CheckLogin
     def add_read_member(self, req: HttpRequest):
         pass
+       
+    def youdao_api_proxy(req):
+        audio_file_path = "http://killthisse-avatar.oss-cn-beijing.aliyuncs.com/1684060999727recording.wav"
+        lang_type = 'zh-CHS'
+        q = base64.b64encode(audio_file_path.encode('utf-8')).decode('utf-8')
+        data = {}
+        curtime = str(int(time.time()))
+        data['curtime'] = curtime
+        salt = str(uuid.uuid1())
+        signStr = APP_KEY + truncate(q) + salt + curtime + APP_SECRET
+        sign = encrypt(signStr)
+        data['appKey'] = APP_KEY
+        data['q'] = q
+        data['salt'] = salt
+        data['sign'] = sign
+        data['signType'] = "v2"
+        data['langType'] = lang_type
+        data['rate'] = 16000
+        data['format'] = 'wav'
+        data['channel'] = 1
+        data['type'] = 1
+        YOUDAO_URL = 'https://openapi.youdao.com/asrapi'
+        APP_KEY = '3c60ebd01606a5ca'
+        APP_SECRET = 'RpS8mnChMx9pILX2TyhK69iyCPqnibrV'
+        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+        response = requests.post(YOUDAO_URL, data=data, headers=headers)
+
+        # 将响应的 JSON 转发回前端
+        return response.json()
