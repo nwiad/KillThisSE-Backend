@@ -309,7 +309,7 @@ class UserViewSet(viewsets.ViewSet):
     def get_profile(self, req: HttpRequest):
         user = get_user(req)
 
-        return_data = return_field(user.serialize(), ["user_id", "name", "avatar","user_email"])
+        return_data = return_field(user.serialize(), ["user_id", "name", "avatar", "user_email"])
         return request_success(return_data)
 
 # region 搜好友相关功能    

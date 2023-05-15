@@ -52,8 +52,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 file_url=file_url,
                 quote_with=quote_with
             )
-            for member_id in mentioned_members:
-                member = User.objects.filter(user_id=member_id)
+            for member_name in mentioned_members:
+                member = User.objects.filter(name=member_name)
                 new_message.mentioned_members.aadd(member)
                 self.conversation.mentioned_members.aadd(member)
 
@@ -77,7 +77,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         deleted_msg_id = text_data_json.get("deleted_msg_id")
         withdraw_msg_id = text_data_json.get("withdraw_msg_id")  # 检查传入消息是否包含 withdraw
         quote_with = text_data_json.get("quote_with") if text_data_json.get("quote_with") is not None else -1 # 检查传入消息是否引用了其他消息
-        # 这条消息提到了谁 返回一个id的列表
+        # 这条消息提到了谁 返回一个name的列表
         mentioned_members: list = text_data_json.get("mentioned_members")
         # Check_for_login
         if not token:
