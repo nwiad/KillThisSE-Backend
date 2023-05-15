@@ -1008,6 +1008,18 @@ class UserViewSet(viewsets.ViewSet):
         conversation = Conversation.objects.filter(conversation_id=conversation_id).first()
         if not conversation:
             return request_failed(2, "Conversation does not exist")
+        if user not in conversation.members.all():
+            return request_failed(3, "You are not in this group")
+        # Successful stick
+        conversation.sticky_members.add(user)
+        return request_success({"Sticked": True})
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def get_sticky_private_conversations(self, req: HttpRequest):
+        """
+        获取所有的置顶私聊
+        """
 
     @action(detail=False, methods=["POST"])
     @CheckLogin
@@ -1034,6 +1046,8 @@ class UserViewSet(viewsets.ViewSet):
         user = get_user(req)
         body = json.loads(req.body.decode("utf-8"))
         conversation_id = body.get("conversation")
+        if conversation_id == -1:
+            return request_success({"Message List Empty": True})
         conversation = Conversation.objects.filter(conversation_id=conversation_id).first()
         if not conversation:
             return request_failed(2, "Conversation does not exist")

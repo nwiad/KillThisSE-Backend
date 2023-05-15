@@ -29,6 +29,8 @@ class Conversation(models.Model):
     disabled = models.BooleanField(default=False)
     # 群公告
     announcement = models.CharField(max_length=MAX_CHAR_LENGTH)
+    # 置顶的成员列表
+    sticky_members = models.ManyToManyField(User, related_name="sticky_members")
 
 
 class Message(models.Model):
