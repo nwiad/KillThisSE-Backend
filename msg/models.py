@@ -1,6 +1,6 @@
 from django.db import models
 
-import datetime
+import datetime, pytz
 
 from user.models import User
 from utils.utils_time import *
@@ -66,3 +66,21 @@ class Message(models.Model):
     quote_with = models.IntegerField(default=-1)
     # 已读成员列表
     read_members = models.ManyToManyField(User, related_name="read_members")
+
+    def serialize(self):
+        return {
+            "conversation_id": self.conversation_id,
+            "msg_id": self.msg_id,
+            "msg_body": self.msg_body,
+            "sender_id": self.sender_id,
+            "sender_name": User.objects.get(user_id=self.sender_id).name,
+            "sender_avatar": User.objects.get(user_id=self.sender_id).avatar,
+            "create_time": self.create_time.astimezone(pytz.timezone('Asia/Shanghai')).strftime("%m-%d %H:%M"),
+            "is_image": self.is_image,
+            "image_url": self.image_url,
+            "is_file": self.is_file,
+            "file_url": self.file_url,
+            "is_audio": self.is_audio,
+            "is_video": self.is_video,
+            "quote_with": self.quote_with
+        }

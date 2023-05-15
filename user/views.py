@@ -1142,4 +1142,81 @@ class UserViewSet(viewsets.ViewSet):
         elif user in conversation.silent_members.all():
             conversation.silent_members.remove(user)
         return request_success({"Modified": True})
+
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def query_by_sender(self, req: HttpRequest):
+        """
+        根据发送者查询聊天记录
+        """
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        conversation_id = body.get("conversation")
+        conversation = Conversation.objects.filter(conversation_id=conversation_id).first()
+        if not conversation:
+            return request_failed(2, "Conversation does not exist")
+        if user not in conversation.members.all():
+            return request_failed(3, "User is not in this conversation")
+        sender_id = body.get("sender")
+        msg_list = Message.objects.filter(conversation_id=conversation_id, sender_id=sender_id).all()
+        return_data = {
+            "messages": [
+                msg.serialize() for msg in msg_list
+            ]
+        }
+        return request_success(return_data)
     
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def query_by_content(self, req: HttpRequest):
+        """
+        根据内容查询聊天记录
+        """
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        conversation_id = body.get("conversation")
+        conversation = Conversation.objects.filter(conversation_id=conversation_id).first()
+        if not conversation:
+            return request_failed(2, "Conversation does not exist")
+        if user not in conversation.members.all():
+            return request_failed(3, "User is not in this conversation")
+        content = body.get("content")
+        msg_list = Message.objects.filter(conversation_id=conversation_id, msg_body__contains=content).all()
+        return_data = {
+            "messages": [
+                msg.serialize() for msg in msg_list
+            ]
+        }
+        return request_success(return_data)
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def query_by_type(self, req: HttpRequest):
+        """
+        根据类型查询聊天记录 
+        """
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        conversation_id = body.get("conversation")
+        conversation = Conversation.objects.filter(conversation_id=conversation_id).first()
+        if not conversation:
+            return request_failed(2, "Conversation does not exist")
+        if user not in conversation.members.all():
+            return request_failed(3, "User is not in this conversation")
+        msg_type: str = body.get("type")
+        if msg_type == "image":
+            msg_list = Message.objects.filter(conversation_id=conversation_id, is_image=True).all()
+        elif msg_type == "video":
+            msg_list = Message.objects.filter(conversation_id=conversation_id, is_video=True).all()
+        elif msg_type == "file":
+            msg_list = Message.objects.filter(conversation_id=conversation_id, is_file=True).all()
+        elif msg_type == "audio":
+            msg_list = Message.objects.filter(conversation_id=conversation_id, is_audio=True).all()
+        else:
+            return request_failed(4, "Unknown type of message")
+        return_data = {
+            "messages": [
+                msg.serialize() for msg in msg_list
+            ]
+        }
+        return request_success(return_data)
