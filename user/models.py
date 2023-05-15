@@ -24,6 +24,8 @@ class User(AbstractBaseUser):
     user_code = models.IntegerField(default=0)
     # 验证码创建的时间戳
     user_code_created_time = models.FloatField(default=0)
+    # 是否注销
+    disabled = models.BooleanField(default=False)
     
     def serialize(self):
         return {

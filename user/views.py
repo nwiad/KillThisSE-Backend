@@ -63,7 +63,7 @@ class UserViewSet(viewsets.ViewSet):
         token = body.get("token")
         user = get_user(req)
         Token.objects.filter(key=token).delete()
-        user.delete()
+        user.disabled = True
         return request_success({"Deleted": True})
 # endregion
 
@@ -89,6 +89,8 @@ class UserViewSet(viewsets.ViewSet):
             return request_failed(2, "User does not exist")
         if not user.check_password(password):
             return request_failed(3, "Wrong password")
+        if user.disabled:
+            return request_failed(2, "User does not exist")
         if verify_user(user):
             Token.objects.filter(user=user).delete()
         
@@ -764,6 +766,7 @@ class UserViewSet(viewsets.ViewSet):
             group_conversation.administrators.remove(user)
         if user in group_conversation.sticky_members.all():
             group_conversation.sticky_members.remove(user)
+        group_conversation.save()
         return request_success({"Left": True})
     
     @action(detail=False, methods=["POST"])
@@ -800,6 +803,7 @@ class UserViewSet(viewsets.ViewSet):
             # 删除免打扰关系
             if member in group_conversation.silent_members.all():
                 group_conversation.silent_members.remove(member)
+        group_conversation.save()
         return request_success({"Removed": True})
         
     @action(detail=False, methods=["POST"])
