@@ -545,7 +545,8 @@ class UserViewSet(viewsets.ViewSet):
                     "friend_name": friend.name,
                     "friend_avatar": friend.avatar,
                     "is_Private": conversation.is_Private,
-                    "silent": user in conversation.silent_members.all()
+                    "silent": user in conversation.silent_members.all(),
+                    "sticked": False
                 }
                 for conversation, friend in zip(private_conversation_list, members)
             ]
@@ -595,7 +596,8 @@ class UserViewSet(viewsets.ViewSet):
                     "name": conversation.conversation_name,
                     "avatar": conversation.conversation_avatar,
                     "is_Private": conversation.is_Private,
-                    "silent": user in conversation.silent_members.all()
+                    "silent": user in conversation.silent_members.all(),
+                    "sticked": False
                 }
                 for conversation in group_conversation_list
             ]
@@ -1057,7 +1059,8 @@ class UserViewSet(viewsets.ViewSet):
                     "friend_name": friend.name,
                     "friend_avatar": friend.avatar,
                     "is_Private": conversation.is_Private,
-                    "silent": user in conversation.silent_members.all()
+                    "silent": user in conversation.silent_members.all(),
+                    "sticked": True
                 }
                 for conversation, friend in zip(private_conversation_list, members)
             ]
@@ -1079,7 +1082,8 @@ class UserViewSet(viewsets.ViewSet):
                     "name": conversation.conversation_name,
                     "avatar": conversation.conversation_avatar,
                     "is_Private": conversation.is_Private,
-                    "silent": user in conversation.silent_members.all()
+                    "silent": user in conversation.silent_members.all(),
+                    "sticked": True
                 }
                 for conversation in group_conversation_list
             ]
@@ -1108,6 +1112,7 @@ class UserViewSet(viewsets.ViewSet):
         """
         设置已读的位置
         """
+        print("Hello")
         user = get_user(req)
         body = json.loads(req.body.decode("utf-8"))
         conversation_id = body.get("conversation")
@@ -1123,6 +1128,7 @@ class UserViewSet(viewsets.ViewSet):
         # 标记为已读
         for msg in msg_list:
             msg.read_members.add(user)
+        msg.save()
         return request_success({"Set Read Messages": True})
     
     @action(detail=False, methods=["POST"])

@@ -12,6 +12,7 @@ from asgiref.sync import sync_to_async
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.conversation_id = self.scope['url_route']['kwargs']['conversation_id']
+        self.user_id = self.scope['url_route']['kwargs']['user_id']
         await self.channel_layer.group_add(str(self.conversation_id), self.channel_name)
         await self.channel_layer.group_send(str(self.conversation_id), {"type": "chat_message"})
         await self.accept()
@@ -38,7 +39,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         
         @sync_to_async
         def create_message():
-            return Message.objects.create(
+            new_message = Message.objects.create(
                 msg_body=message,
                 conversation_id=self.conversation_id,
                 sender_id=sender.user_id,
@@ -51,6 +52,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 file_url=file_url,
                 quote_with=quote_with
             )
+            for member_id in mentioned_members:
+                member = User.objects.filter(user_id=member_id)
+                new_message.mentioned_members.aadd(member)
+            new_message.asave()
+            return new_message
         
         text_data_json = json.loads(text_data)
         message = text_data_json["message"]
@@ -67,6 +73,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         deleted_msg_id = text_data_json.get("deleted_msg_id")
         withdraw_msg_id = text_data_json.get("withdraw_msg_id")  # 检查传入消息是否包含 withdraw
         quote_with = text_data_json.get("quote_with") if text_data_json.get("quote_with") is not None else -1 # 检查传入消息是否引用了其他消息
+        mentioned_members: list = text_data_json.get("mentioned_members")
         # Check_for_login
         if not token:
             # TODO: Add more info
