@@ -54,8 +54,7 @@ class UserViewSet(viewsets.ViewSet):
             user.set_password(password)
             user.save()
         return request_success({"Created": True})
-    
-            
+               
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def cancel_account(self, req: HttpRequest):
@@ -74,8 +73,7 @@ class UserViewSet(viewsets.ViewSet):
             return request_success({"Logged in": True})
         else:
             return request_failed(1, "Not logged in yet")
-    
-              
+               
     @action(detail=False, methods=["POST"])
     def login(self, req: HttpRequest):
         body = json.loads(req.body.decode("utf-8"))
@@ -189,8 +187,7 @@ class UserViewSet(viewsets.ViewSet):
         user.user_email = new_email
         user.save()
         return request_success({"Reset": True})
-        
-    
+           
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def reset_password(self, req: HttpRequest):
@@ -208,7 +205,6 @@ class UserViewSet(viewsets.ViewSet):
             user.save()
             return request_success({"Modified": True})
 
-    
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def reset_avatar(self, req: HttpRequest):
@@ -344,7 +340,7 @@ class UserViewSet(viewsets.ViewSet):
         return request_success(return_data)
     
 
-    @action(detail=False, methods=["GET"])
+    @action(detail=False, methods=["POST"])
     @CheckLogin
     def get_friends(self, req: HttpRequest):
         user = get_user(req)
