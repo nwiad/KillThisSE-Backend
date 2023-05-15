@@ -755,10 +755,13 @@ class UserViewSet(viewsets.ViewSet):
             return request_failed(2, "Group not exist")
         if user not in group_conversation.members.all():
             return request_failed(3, "You are not in the group")
+        if user.user_id == group_conversation.owner:
+            return request_failed(4, "Owner cannot leave the group")
         group_conversation.members.remove(user)
         if user in group_conversation.administrators.all():
             group_conversation.administrators.remove(user)
-        # TODO: 群主退群???
+        if user in group_conversation.sticky_members.all():
+            group_conversation.sticky_members.remove(user)
         return request_success({"Left": True})
     
     @action(detail=False, methods=["POST"])
@@ -785,6 +788,8 @@ class UserViewSet(viewsets.ViewSet):
         # 撤销管理员身份
         if member in group_conversation.administrators.all():
             group_conversation.administrators.remove(member)
+        if member in group_conversation.sticky_members.all():
+            group_conversation.sticky_members.remove(member)
         return request_success({"Removed": True})
         
     @action(detail=False, methods=["POST"])
@@ -885,7 +890,7 @@ class UserViewSet(viewsets.ViewSet):
         group_id = body.get("group")
         group_conversation = Conversation.objects.filter(conversation_id=group_id, is_Private=False).first()
         if not group_conversation:
-            return request_failed(2, "What the hell happened??")
+            return request_failed(2, "Group does not exist")
         if not user in group_conversation.members.all():
             return request_failed(3, "You are not in this group")
         return_data = {"Announcement": group_conversation.announcement}
@@ -1021,6 +1026,7 @@ class UserViewSet(viewsets.ViewSet):
         获取所有的置顶私聊
         """
 
+
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def get_unread_messages(self, req: HttpRequest):
@@ -1046,12 +1052,12 @@ class UserViewSet(viewsets.ViewSet):
         user = get_user(req)
         body = json.loads(req.body.decode("utf-8"))
         conversation_id = body.get("conversation")
-        if conversation_id == -1:
-            return request_success({"Message List Empty": True})
         conversation = Conversation.objects.filter(conversation_id=conversation_id).first()
         if not conversation:
             return request_failed(2, "Conversation does not exist")
         msg_id = body.get("msg_id")
+        if msg_id == -1:
+            return request_success({"Message List Empty": True})
         msg_list = Message.objects.filter(conversation_id=conversation_id, msg_id__lte=msg_id)
         if msg_list.first() is None:
             return request_failed(3, "Message does not exist")
