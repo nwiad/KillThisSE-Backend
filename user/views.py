@@ -775,23 +775,30 @@ class UserViewSet(viewsets.ViewSet):
         user = get_user(req)
         body = json.loads(req.body.decode("utf-8"))
         conversation_id = body.get("group")
-        member_id = body.get("member")
+        member_ids: list = body.get("members")
         group_conversation = Conversation.objects.filter(conversation_id=conversation_id, is_Private=False).first()
-        member = User.objects.filter(user_id=member_id).first()
         if not group_conversation:
             return request_failed(2, "Group not exist")
         if (not user.user_id == group_conversation.owner) and (not user in group_conversation.administrators.all()):
             return request_failed(3, "Permission denied")
-        if (not user.user_id == group_conversation.owner) and member in group_conversation.administrators.all():
-            return request_failed(3, "Permission denied")
-        if member not in group_conversation.members.all():
-            return request_failed(4, "Member is not in the group")
-        group_conversation.members.remove(member)
-        # 撤销管理员身份
-        if member in group_conversation.administrators.all():
-            group_conversation.administrators.remove(member)
-        if member in group_conversation.sticky_members.all():
-            group_conversation.sticky_members.remove(member)
+        for member_id in member_ids:
+            member = User.objects.filter(user_id=member_id).first()
+            if not member:
+                return request_failed(5, "User does not exist")
+            if (not user.user_id == group_conversation.owner) and member in group_conversation.administrators.all():
+                return request_failed(3, "Permission denied")
+            if member not in group_conversation.members.all():
+                return request_failed(4, "Member is not in the group")
+            group_conversation.members.remove(member)
+            # 撤销管理员身份
+            if member in group_conversation.administrators.all():
+                group_conversation.administrators.remove(member)
+            # 删除置顶关系
+            if member in group_conversation.sticky_members.all():
+                group_conversation.sticky_members.remove(member)
+            # 删除免打扰关系
+            if member in group_conversation.silent_members.all():
+                group_conversation.silent_members.remove(member)
         return request_success({"Removed": True})
         
     @action(detail=False, methods=["POST"])
@@ -1135,3 +1142,4 @@ class UserViewSet(viewsets.ViewSet):
         elif user in conversation.silent_members.all():
             conversation.silent_members.remove(user)
         return request_success({"Modified": True})
+    
