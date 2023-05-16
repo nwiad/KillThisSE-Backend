@@ -292,7 +292,7 @@ class UserViewSet(viewsets.ViewSet):
         user = get_user(req)
         body = json.loads(req.body.decode("utf-8"))
         friend_id = body.get('friend_user_id')
-        friend = User.objects.filter(user_id=friend_id)
+        friend = User.objects.filter(user_id=friend_id).first()
 
         if not friend:
             return request_failed(2, "your Friend not exist")
@@ -303,7 +303,7 @@ class UserViewSet(viewsets.ViewSet):
         
         Friendship.objects.filter(user_id=user.user_id, friend_user_id=friend_id).delete()
         Friendship.objects.filter(user_id=friend_id, friend_user_id=user.user_id).delete()
-        conversation = Conversation.objects.filter(members__in=[user]).filter(members__in=[friend]).first()
+        conversation = Conversation.objects.filter(members__in=[user], is_Private=True).filter(members__in=[friend]).first()
         if conversation:
             conversation.delete()
         return request_success({"Deleted": True})
