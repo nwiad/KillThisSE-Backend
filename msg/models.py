@@ -1,7 +1,7 @@
 from django.db import models
 
 import datetime, pytz
-
+import random
 from user.models import User
 from utils.utils_time import *
 from utils.utils_constant import MAX_CHAR_LENGTH
@@ -12,7 +12,7 @@ class Conversation(models.Model):
     # 会话名称
     conversation_name = models.CharField(max_length=MAX_CHAR_LENGTH)
     # 会话头像
-    conversation_avatar = models.CharField(max_length=MAX_CHAR_LENGTH, default="https://github.com/LTNSXD/LTNSXD.github.io/blob/main/img/favicon.jpg?raw=true")
+    conversation_avatar = models.CharField(max_length=MAX_CHAR_LENGTH, default="")
     # 创建时间
     create_time = models.DateTimeField(default=datetime.datetime.now)
     # 更新时间
@@ -35,6 +35,23 @@ class Conversation(models.Model):
     silent_members = models.ManyToManyField(User, related_name="silent_members")
     # 被mention的成员列表
     mentioned_members = models.ManyToManyField(User, related_name="group_mentioned_members")
+    
+    
+    
+    def save(self, *args, **kwargs):
+        if not self.conversation_avatar:
+            default_avatars = [
+                "https://killthisse-avatar.oss-cn-beijing.aliyuncs.com/%E9%BB%98%E8%AE%A41.jpg",
+                "https://killthisse-avatar.oss-cn-beijing.aliyuncs.com/%E9%BB%98%E8%AE%A42.jpg",
+                "https://killthisse-avatar.oss-cn-beijing.aliyuncs.com/%E9%BB%98%E8%AE%A43.jpg",
+                "https://killthisse-avatar.oss-cn-beijing.aliyuncs.com/%E9%BB%98%E8%AE%A44.jpg",
+                "https://killthisse-avatar.oss-cn-beijing.aliyuncs.com/%E9%BB%98%E8%AE%A45.jpg",
+                "https://killthisse-avatar.oss-cn-beijing.aliyuncs.com/%E9%BB%98%E8%AE%A46.png",
+                "https://killthisse-avatar.oss-cn-beijing.aliyuncs.com/%E9%BB%98%E8%AE%A47.png",
+                "https://killthisse-avatar.oss-cn-beijing.aliyuncs.com/%E9%BB%98%E8%AE%A48.png",
+            ]
+            self.conversation_avatar = random.choice(default_avatars)
+        super().save(*args, **kwargs)
 
 
 class Message(models.Model):

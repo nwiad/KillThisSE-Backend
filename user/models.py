@@ -1,10 +1,21 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
-
+import random
 import datetime
 
 from utils.utils_time import *
 from utils.utils_constant import MAX_CHAR_LENGTH, MAX_NAME_LENGTH
+
+default_avatars = [
+    "https://killthisse-avatar.oss-cn-beijing.aliyuncs.com/%E9%BB%98%E8%AE%A41.jpg",
+    "https://killthisse-avatar.oss-cn-beijing.aliyuncs.com/%E9%BB%98%E8%AE%A42.jpg",
+    "https://killthisse-avatar.oss-cn-beijing.aliyuncs.com/%E9%BB%98%E8%AE%A43.jpg",
+    "https://killthisse-avatar.oss-cn-beijing.aliyuncs.com/%E9%BB%98%E8%AE%A44.jpg",
+    "https://killthisse-avatar.oss-cn-beijing.aliyuncs.com/%E9%BB%98%E8%AE%A45.jpg",
+    "https://killthisse-avatar.oss-cn-beijing.aliyuncs.com/%E9%BB%98%E8%AE%A46.jpg",
+    "https://killthisse-avatar.oss-cn-beijing.aliyuncs.com/%E9%BB%98%E8%AE%A47.jpg",
+    "https://killthisse-avatar.oss-cn-beijing.aliyuncs.com/%E9%BB%98%E8%AE%A48.jpg",
+]
 
 # 用户管理
 class User(AbstractBaseUser):
@@ -14,7 +25,22 @@ class User(AbstractBaseUser):
 
     USERNAME_FIELD = "name"
     
-    avatar = models.CharField(max_length=MAX_CHAR_LENGTH, default="https://github.com/LTNSXD/LTNSXD.github.io/blob/main/img/favicon.jpg?raw=true")
+    avatar = models.CharField(max_length=MAX_CHAR_LENGTH, default="")
+    
+    def save(self, *args, **kwargs):
+        if not self.avatar:
+            default_avatars = [
+                "https://killthisse-avatar.oss-cn-beijing.aliyuncs.com/%E9%BB%98%E8%AE%A41.jpg",
+                "https://killthisse-avatar.oss-cn-beijing.aliyuncs.com/%E9%BB%98%E8%AE%A42.jpg",
+                "https://killthisse-avatar.oss-cn-beijing.aliyuncs.com/%E9%BB%98%E8%AE%A43.jpg",
+                "https://killthisse-avatar.oss-cn-beijing.aliyuncs.com/%E9%BB%98%E8%AE%A44.jpg",
+                "https://killthisse-avatar.oss-cn-beijing.aliyuncs.com/%E9%BB%98%E8%AE%A45.jpg",
+                "https://killthisse-avatar.oss-cn-beijing.aliyuncs.com/%E9%BB%98%E8%AE%A46.png",
+                "https://killthisse-avatar.oss-cn-beijing.aliyuncs.com/%E9%BB%98%E8%AE%A47.png",
+                "https://killthisse-avatar.oss-cn-beijing.aliyuncs.com/%E9%BB%98%E8%AE%A48.png",
+            ]
+            self.avatar = random.choice(default_avatars)
+        super().save(*args, **kwargs)
     
     # 邮箱 
     user_email = models.CharField(max_length=MAX_CHAR_LENGTH, default="2365269662@qq.com")

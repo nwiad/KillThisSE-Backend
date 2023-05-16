@@ -52,6 +52,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 file_url=file_url,
                 quote_with=quote_with
             )
+            
             if mentioned_members is not None:
                 for member_name in mentioned_members:
                     member = User.objects.filter(name=member_name).first()
