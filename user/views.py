@@ -668,6 +668,32 @@ class UserViewSet(viewsets.ViewSet):
     
     @action(detail=False, methods=["POST"])
     @CheckLogin
+    def admin_invite_member(self, req: HttpRequest):
+        """
+        管理员直接邀请用户进入群聊
+        """
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        group_id = body.get("group")
+        group_conversation = Conversation.objects.filter(conversation_id=group_id, is_Private=False).first()
+        if not group_conversation:
+            return request_failed(2, "Group does not exist")
+        invitee_ids: list = body.get("invitee")
+        invitees = [User.objects.filter(user_id=invitee_id).first() for invitee_id in invitee_ids]
+        if user not in group_conversation.administrators.all() and user.user_id == group_conversation.owner:
+            return request_failed(5, "Permission denied")
+        for invitee in invitees:
+            if not invitee:
+                return request_failed(3, "The user you tried to invite does not exist")
+            if invitee in group_conversation.members.all():
+                return request_failed(4, "User is already in the group")
+        # Successful invite
+        for invitee in invitees:
+            group_conversation.members.add(invitee)
+        return request_success({"Invited": True})
+        
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
     def invite_member_to_group(self, req: HttpRequest):
         """
         用户邀请新用户进入群聊（需要得到群主/管理员的同意）
