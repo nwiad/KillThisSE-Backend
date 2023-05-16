@@ -157,10 +157,28 @@ class ChatConsumer(AsyncWebsocketConsumer):
         def async_serialize(msg: Message):
             return msg.serialize()
         
+        @sync_to_async
+        def get_conversation(user_id):
+            """
+            获取这个用户的所有会话
+            """
+            conversations = Conversation.objects.filter(members__in=[user_id]).all()
+            #存储conv里面 每个元素的会话id  name 和 avatar
+            conv = [
+                {
+                    'id': conversation.conversation_id,  # 使用实际的字段名替换这里的 id
+                    'name': conversation.conversation_name,  # 使用实际的字段名替换这里的 name
+                    'avatar': conversation.conversation_avatar,  # 使用实际的字段名替换这里的 avatar
+                }
+                for conversation in conversations
+            ]
+            return conv
+            
         
         messages = []
         members = []
-            
+        # 这个用户的所有会话
+        conversations = [] 
         nowpeople = self.user
         
         async for msg in Message.objects.filter(conversation_id=self.conversation_id).all():
@@ -187,6 +205,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 "is_video": msg.is_video,
                 "quote_with": msg.quote_with,
                 "delete_members": deletemsgusers,
+                "chosen": False,
                 "mentioned_members": [
                     member.user_id async for member in msg.mentioned_members.all()
                 ],
@@ -198,5 +217,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
         
         # 获取本会话的所有其他成员
         members = await get_members(self.conversation_id)
+        conversations = await get_conversation(nowpeople.user_id)
         # 给前端发送的消息
-        await self.send(text_data=json.dumps({"messages": messages, "members": members, "mentioned": mentioned_groups}))
+        await self.send(text_data=json.dumps({"messages": messages, 
+                                              "members": members, 
+                                              "mentioned": mentioned_groups,
+                                              "conversations":conversations
+                                              }))
