@@ -305,7 +305,8 @@ class UserViewSet(viewsets.ViewSet):
         Friendship.objects.filter(user_id=friend_id, friend_user_id=user.user_id).delete()
         conversation = Conversation.objects.filter(members__in=[user], is_Private=True).filter(members__in=[friend]).first()
         if conversation:
-            conversation.delete()
+            conversation.disabled = True
+            conversation.save()
         return request_success({"Deleted": True})
 
 # endregion
@@ -572,7 +573,8 @@ class UserViewSet(viewsets.ViewSet):
                     "friend_avatar": friend.avatar,
                     "is_Private": conversation.is_Private,
                     "silent": user in conversation.silent_members.all(),
-                    "sticked": False
+                    "sticked": False,
+                    "disabled": conversation.disabled
                 }
                 for conversation, friend in zip(private_conversation_list, members)
             ]
@@ -596,9 +598,10 @@ class UserViewSet(viewsets.ViewSet):
             return request_failed(3, "You are not friends")
         # Successful get
         if Conversation.objects.filter(members__in=[user], is_Private=True).filter(members__in=[friend]).first():
-            # print("HI")
             conversation = Conversation.objects.filter(members__in=[user], is_Private=True).filter(members__in=[friend]).first()
-            print(conversation.conversation_id)
+            if conversation.disabled:
+                conversation.disabled = False
+            conversation.save()
             return request_success({"conversation_id": conversation.conversation_id, "silent": user in conversation.silent_members.all()})
         # Successful create
         conversation = Conversation.objects.create(is_Private=True)
@@ -623,7 +626,8 @@ class UserViewSet(viewsets.ViewSet):
                     "avatar": conversation.conversation_avatar,
                     "is_Private": conversation.is_Private,
                     "silent": user in conversation.silent_members.all(),
-                    "sticked": False
+                    "sticked": False,
+                    "disabled": conversation.disabled
                 }
                 for conversation in group_conversation_list
             ]
@@ -793,9 +797,22 @@ class UserViewSet(viewsets.ViewSet):
         group_conversation.save()
         return request_success({"Left": True})
 
-    # @action(detail=False, methods=["POST"])
-    # @CheckLogin
-    # def 
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def add_validation(self, req: HttpRequest):
+        """
+        为聊天增加二次验证
+        """
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        conversation_id = body.get("conversation")
+        conversation = Conversation.objects.filter(conversation_id=conversation_id).first()
+        if not conversation:
+            return request_failed(2, "Conversation does not exist")
+        if not user in conversation.members.all():
+            return request_failed(3, "You are not in this conversation")
+        
+
     
     @action(detail=False, methods=["POST"])
     @CheckLogin
@@ -1090,7 +1107,8 @@ class UserViewSet(viewsets.ViewSet):
                     "friend_avatar": friend.avatar,
                     "is_Private": conversation.is_Private,
                     "silent": user in conversation.silent_members.all(),
-                    "sticked": True
+                    "sticked": True,
+                    "disabled": conversation.disabled
                 }
                 for conversation, friend in zip(private_conversation_list, members)
             ]
@@ -1113,7 +1131,8 @@ class UserViewSet(viewsets.ViewSet):
                     "avatar": conversation.conversation_avatar,
                     "is_Private": conversation.is_Private,
                     "silent": user in conversation.silent_members.all(),
-                    "sticked": True
+                    "sticked": True,
+                    "disabled": conversation.disabled
                 }
                 for conversation in group_conversation_list
             ]
