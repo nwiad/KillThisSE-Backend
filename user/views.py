@@ -63,6 +63,7 @@ class UserViewSet(viewsets.ViewSet):
         user = get_user(req)
         Token.objects.filter(key=token).delete()
         user.disabled = True
+        user.save()
         return request_success({"Deleted": True})
 # endregion
 
@@ -127,6 +128,8 @@ class UserViewSet(viewsets.ViewSet):
         body = json.loads(req.body.decode("utf-8"))
         email = body.get('email')
         user = User.objects.filter(user_email = email).first()
+        if user.disabled:
+            return request_failed(2, "User does not exist")
         
         if(check_code(user, body.get('code_input'))):
             if time.time() - user.user_code_created_time > 120: # 验证码有效期2分钟
