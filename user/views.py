@@ -772,7 +772,8 @@ class UserViewSet(viewsets.ViewSet):
             return request_failed(2, "Group not exist")
         if group_conversation.owner != user.user_id:
             return request_failed(3, "You are not the owner of this group")
-        group_conversation.delete()
+        group_conversation.disabled = True
+        group_conversation.save()
         return request_success({"Dismissed": True})
     
     @action(detail=False, methods=["POST"])
