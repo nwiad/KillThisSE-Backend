@@ -303,6 +303,9 @@ class UserViewSet(viewsets.ViewSet):
         
         Friendship.objects.filter(user_id=user.user_id, friend_user_id=friend_id).delete()
         Friendship.objects.filter(user_id=friend_id, friend_user_id=user.user_id).delete()
+        conversation = Conversation.objects.filter(members__in=[user]).filter(members__in=[friend])
+        if conversation:
+            conversation.delete()
         return request_success({"Deleted": True})
 
 # endregion
@@ -789,6 +792,10 @@ class UserViewSet(viewsets.ViewSet):
             group_conversation.sticky_members.remove(user)
         group_conversation.save()
         return request_success({"Left": True})
+
+    # @action(detail=False, methods=["POST"])
+    # @CheckLogin
+    # def 
     
     @action(detail=False, methods=["POST"])
     @CheckLogin
