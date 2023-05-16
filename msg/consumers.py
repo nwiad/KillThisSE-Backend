@@ -198,4 +198,5 @@ class ChatConsumer(AsyncWebsocketConsumer):
         
         # 获取本会话的所有其他成员
         members = await get_members(self.conversation_id)
+        # 给前端发送的消息
         await self.send(text_data=json.dumps({"messages": messages, "members": members, "mentioned": mentioned_groups}))
