@@ -593,12 +593,12 @@ class UserViewSet(viewsets.ViewSet):
             # print("HI")
             conversation = Conversation.objects.filter(members__in=[user], is_Private=True).filter(members__in=[friend]).first()
             print(conversation.conversation_id)
-            return request_success({"conversation_id": conversation.conversation_id})
+            return request_success({"conversation_id": conversation.conversation_id, "silent": user in conversation.silent_members.all()})
         # Successful create
         conversation = Conversation.objects.create(is_Private=True)
         conversation.save()
         conversation.members.add(user, friend)
-        return request_success({"conversation_id": conversation.conversation_id})
+        return request_success({"conversation_id": conversation.conversation_id, "silent": user in conversation.silent_members.all()})
 
     @action(detail=False, methods=["POST"])
     @CheckLogin

@@ -93,6 +93,9 @@ class Message(models.Model):
             "is_audio": self.is_audio,
             "is_video": self.is_video,
             "quote_with": self.quote_with,
+            "mentioned_members": [
+                member.user_id for member in self.mentioned_members.all()
+            ],
             "is_transmit": self.is_transmit,
             "transmit_with": [
                 msg.serialize() for msg in self.transmit_with.all()
