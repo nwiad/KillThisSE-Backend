@@ -63,6 +63,7 @@ class UserViewSet(viewsets.ViewSet):
         user = get_user(req)
         Token.objects.filter(key=token).delete()
         user.disabled = True
+        user.save()
         return request_success({"Deleted": True})
 # endregion
 
@@ -127,6 +128,8 @@ class UserViewSet(viewsets.ViewSet):
         body = json.loads(req.body.decode("utf-8"))
         email = body.get('email')
         user = User.objects.filter(user_email = email).first()
+        if user.disabled:
+            return request_failed(2, "User does not exist")
         
         if(check_code(user, body.get('code_input'))):
             if time.time() - user.user_code_created_time > 120: # 验证码有效期2分钟
@@ -300,6 +303,9 @@ class UserViewSet(viewsets.ViewSet):
         
         Friendship.objects.filter(user_id=user.user_id, friend_user_id=friend_id).delete()
         Friendship.objects.filter(user_id=friend_id, friend_user_id=user.user_id).delete()
+        conversation = Conversation.objects.filter(members__in=[user]).filter(members__in=[friend]).first()
+        if conversation:
+            conversation.delete()
         return request_success({"Deleted": True})
 
 # endregion
@@ -786,6 +792,10 @@ class UserViewSet(viewsets.ViewSet):
             group_conversation.sticky_members.remove(user)
         group_conversation.save()
         return request_success({"Left": True})
+
+    # @action(detail=False, methods=["POST"])
+    # @CheckLogin
+    # def 
     
     @action(detail=False, methods=["POST"])
     @CheckLogin
