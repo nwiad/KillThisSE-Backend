@@ -522,6 +522,26 @@ class UserViewSet(viewsets.ViewSet):
 # region 聊天相关功能
     @action(detail=False, methods=["POST"])
     @CheckLogin
+    def get_friend_by_conversation(self, req: HttpRequest):
+        """
+        通过（私聊）会话id获取对方信息
+        """
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        conversation_id = body.get("conversation")
+        conversation = Conversation.objects.filter(conversation_id=conversation_id, is_Private=True).first()
+        if not conversation:
+            return request_failed(2, "Conversation does not exist")
+        if user not in conversation.members.all():
+            return request_failed(3, "You are not in this conversation")
+        friend = conversation.members.all().exclude(user_id=user.user_id).first()
+        return_data = {
+            "friend": friend.serialize()
+        }
+        return request_success(return_data)
+
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
     def get_private_conversations(self, req: HttpRequest):
         """
         获取用户所有的私聊（不包括置顶的）
@@ -1149,6 +1169,28 @@ class UserViewSet(viewsets.ViewSet):
         elif user in conversation.silent_members.all():
             conversation.silent_members.remove(user)
         return request_success({"Modified": True})
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def query_all_records(self, req: HttpRequest):
+        """
+        查询所有的聊天记录
+        """
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        conversation_id = body.get("conversation")
+        conversation = Conversation.objects.filter(conversation_id=conversation_id).first()
+        if not conversation:
+            return request_failed(2, "Conversation does not exist")
+        if user not in conversation.members.all():
+            return request_failed(3, "User is not in this conversation")
+        msg_list = Message.objects.filter(conversation_id=conversation_id).all()
+        return_data = {
+            "messages": [
+                msg.serialize() for msg in msg_list
+            ]
+        }
+        return request_success(return_data)        
 
     @action(detail=False, methods=["POST"])
     @CheckLogin

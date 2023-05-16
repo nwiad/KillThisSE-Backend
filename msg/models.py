@@ -66,6 +66,10 @@ class Message(models.Model):
     file_url = models.CharField(max_length=MAX_CHAR_LENGTH, default=None, null=True)
     # 是否引用其他消息
     quote_with = models.IntegerField(default=-1)
+    # 是否是转发消息
+    is_transmit = models.BooleanField(default=False)
+    # 转发的消息列表
+    # transmit_with = models.ManyToManyField()
     # 已读成员列表
     read_members = models.ManyToManyField(User, related_name="read_members")
     # 删除该消息的成员列表
