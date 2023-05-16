@@ -574,7 +574,8 @@ class UserViewSet(viewsets.ViewSet):
                     "is_Private": conversation.is_Private,
                     "silent": user in conversation.silent_members.all(),
                     "sticked": False,
-                    "disabled": conversation.disabled
+                    "disabled": conversation.disabled,
+                    "validation": user in conversation.valid_members.all()
                 }
                 for conversation, friend in zip(private_conversation_list, members)
             ]
@@ -627,7 +628,8 @@ class UserViewSet(viewsets.ViewSet):
                     "is_Private": conversation.is_Private,
                     "silent": user in conversation.silent_members.all(),
                     "sticked": False,
-                    "disabled": conversation.disabled
+                    "disabled": conversation.disabled,
+                    "validation": user in conversation.valid_members.all()
                 }
                 for conversation in group_conversation_list
             ]
@@ -794,14 +796,16 @@ class UserViewSet(viewsets.ViewSet):
             group_conversation.administrators.remove(user)
         if user in group_conversation.sticky_members.all():
             group_conversation.sticky_members.remove(user)
+        if user in group_conversation.valid_members.all():
+            group_conversation.valid_members.remove(user)
         group_conversation.save()
         return request_success({"Left": True})
 
     @action(detail=False, methods=["POST"])
     @CheckLogin
-    def add_validation(self, req: HttpRequest):
+    def set_validation(self, req: HttpRequest):
         """
-        为聊天增加二次验证
+        为聊天增加/解除二次验证
         """
         user = get_user(req)
         body = json.loads(req.body.decode("utf-8"))
@@ -811,9 +815,27 @@ class UserViewSet(viewsets.ViewSet):
             return request_failed(2, "Conversation does not exist")
         if not user in conversation.members.all():
             return request_failed(3, "You are not in this conversation")
-        
+        valid: str = body.get("valid")
+        if valid == "True":
+            conversation.valid_members.add(user)
+        elif user in conversation.valid_members.all():
+            conversation.valid.members.remove(user)
+        return request_success({"Modified": True})
 
-    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def secondary_validate(self, req: HttpRequest):
+        """
+        二次验证
+        """
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        password = body.get("password")
+        if user.check_password(password):
+            return request_success({"Valid": True})
+        else:
+            return request_failed(2, "Wrong password")
+
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def remove_member_from_group(self, req: HttpRequest):
@@ -1108,7 +1130,8 @@ class UserViewSet(viewsets.ViewSet):
                     "is_Private": conversation.is_Private,
                     "silent": user in conversation.silent_members.all(),
                     "sticked": True,
-                    "disabled": conversation.disabled
+                    "disabled": conversation.disabled,
+                    "validation": user in conversation.valid_members.all()
                 }
                 for conversation, friend in zip(private_conversation_list, members)
             ]
@@ -1132,7 +1155,8 @@ class UserViewSet(viewsets.ViewSet):
                     "is_Private": conversation.is_Private,
                     "silent": user in conversation.silent_members.all(),
                     "sticked": True,
-                    "disabled": conversation.disabled
+                    "disabled": conversation.disabled,
+                    "validation": user in conversation.valid_members.all()
                 }
                 for conversation in group_conversation_list
             ]

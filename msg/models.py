@@ -33,10 +33,12 @@ class Conversation(models.Model):
     sticky_members = models.ManyToManyField(User, related_name="sticky_members")
     # 免打扰的成员列表
     silent_members = models.ManyToManyField(User, related_name="silent_members")
-    # 是否弃用
-    disabled = models.BooleanField(default=False)
     # 被mention的成员列表
     mentioned_members = models.ManyToManyField(User, related_name="group_mentioned_members")
+    # 需要二级验证的成员列表
+    valid_members = models.ManyToManyField(User, related_name="valid_members")
+    # 是否弃用
+    disabled = models.BooleanField(default=False)
     
     
     
