@@ -680,7 +680,7 @@ class UserViewSet(viewsets.ViewSet):
             return request_failed(2, "Group does not exist")
         invitee_ids: list = body.get("invitee")
         invitees = [User.objects.filter(user_id=invitee_id).first() for invitee_id in invitee_ids]
-        if user not in group_conversation.administrators.all() and user.user_id == group_conversation.owner:
+        if (user not in group_conversation.administrators.all()) and (user.user_id != group_conversation.owner):
             return request_failed(5, "Permission denied")
         for invitee in invitees:
             if not invitee:
