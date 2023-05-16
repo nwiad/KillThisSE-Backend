@@ -92,5 +92,9 @@ class Message(models.Model):
             "file_url": self.file_url,
             "is_audio": self.is_audio,
             "is_video": self.is_video,
-            "quote_with": self.quote_with
+            "quote_with": self.quote_with,
+            "is_transmit": self.is_transmit,
+            "transmit_with": [
+                msg.serialize() for msg in self.transmit_with.all()
+            ]
         }

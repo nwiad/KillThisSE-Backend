@@ -50,13 +50,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 is_audio=is_audio,
                 video_url=video_url,
                 file_url=file_url,
-                quote_with=quote_with
+                quote_with=quote_with,
+                is_transmit=is_transmit,
             )
             if mentioned_members is not None:
                 for member_name in mentioned_members:
                     member = User.objects.filter(name=member_name).first()
                     new_message.mentioned_members.add(member)
                     self.conversation.mentioned_members.add(member)
+            
+            if transmit_with is not None:
+                for msg_id in transmit_with:
+                    msg = Message.objects.filter(msg_id=msg_id).first()
+                    new_message.transmit_with.add(msg)
 
             self.conversation.save()
             new_message.save()
@@ -80,6 +86,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
         quote_with = text_data_json.get("quote_with") if text_data_json.get("quote_with") is not None else -1 # 检查传入消息是否引用了其他消息
         # 这条消息提到了谁 返回一个name的列表
         mentioned_members: list = text_data_json.get("mentioned_members")
+        # 转发消息
+        transmit_with = text_data_json.get("transmit_with")
+        is_transmit = transmit_with is not None
+
         # Check_for_login
         if not token:
             # TODO: Add more info
@@ -141,6 +151,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     })
             return members
         
+        # 将序列化包装成异步函数
+        @sync_to_async
+        def async_serialize(msg: Message):
+            return msg.serialize()
+        
         
         messages = []
         members = []
@@ -171,7 +186,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 "is_video": msg.is_video,
                 "quote_with": msg.quote_with,
                 "delete_members": deletemsgusers,
-                "mentioned_members": [member.user_id async for member in msg.mentioned_members.all()]
+                "mentioned_members": [
+                    member.user_id async for member in msg.mentioned_members.all()
+                ],
+                "is_transmit": msg.is_transmit,
+                "transmit_with": [
+                    await async_serialize(m_msg) async for m_msg in msg.transmit_with.all()
+                ]
             })
         
         # 获取本会话的所有成员
