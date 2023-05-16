@@ -723,7 +723,7 @@ class UserViewSet(viewsets.ViewSet):
     @CheckLogin
     def get_group_invitations(self, req: HttpRequest):
         """
-        （群主/管理员）获取所有群聊邀请
+        获取所有群聊邀请
         """
         user = get_user(req)
         body = json.loads(req.body.decode("utf-8"))
@@ -731,8 +731,6 @@ class UserViewSet(viewsets.ViewSet):
         group_conversation = Conversation.objects.filter(conversation_id=group_id, is_Private=False).first()
         if not group_conversation:
             return request_failed(2, "Group does not exist")
-        if (not user in group_conversation.administrators.all()) and (not user.user_id == group_conversation.owner):
-            return request_failed(3, "Permission denied")
         invitations = GroupInvitation.objects.filter(group_id=group_id)
         invitee_ids = [invitation.invitee_id for invitation in invitations]
         invitees = [User.objects.filter(user_id=invitee_id).first() for invitee_id in invitee_ids]
