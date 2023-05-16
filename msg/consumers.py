@@ -157,6 +157,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
         def async_serialize(msg: Message):
             return msg.serialize()
         
+        @sync_to_async
+        def get_last_msg():
+            last_msg = Message.objects.filter(conversation_id=self.conversation_id).order_by("-create_time").first()
+            return last_msg
+        
         
         messages = []
         members = []
@@ -198,5 +203,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
         
         # 获取本会话的所有其他成员
         members = await get_members(self.conversation_id)
+        # 最后一条消息
+        last_msg= await get_last_msg()
+        last_msg_info = await async_serialize(last_msg)
         # 给前端发送的消息
-        await self.send(text_data=json.dumps({"messages": messages, "members": members, "mentioned": mentioned_groups}))
+        await self.send(text_data=json.dumps({"messages": messages, "members": members, "mentioned": mentioned_groups, "last_msg": last_msg_info}))
