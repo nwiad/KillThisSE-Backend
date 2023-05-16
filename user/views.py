@@ -303,7 +303,7 @@ class UserViewSet(viewsets.ViewSet):
         
         Friendship.objects.filter(user_id=user.user_id, friend_user_id=friend_id).delete()
         Friendship.objects.filter(user_id=friend_id, friend_user_id=user.user_id).delete()
-        conversation = Conversation.objects.filter(members__in=[user]).filter(members__in=[friend])
+        conversation = Conversation.objects.filter(members__in=[user]).filter(members__in=[friend]).first()
         if conversation:
             conversation.delete()
         return request_success({"Deleted": True})
