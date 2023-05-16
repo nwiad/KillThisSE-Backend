@@ -154,7 +154,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 create_time = "N/A"  # or some other default value
         
             deletemsgusers = await del_message()
-            # 给前端传递的消息列表
+            # 给前端传递的消息列表s
             messages.append({
                 "conversation_id": self.conversation_id,
                 "msg_id": msg.msg_id,
@@ -174,6 +174,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 "mentioned_members": [member.user_id async for member in msg.mentioned_members.all()]
             })
         
-        # 获取本会话的所有成员
+        # 获取本会话的所有其他成员
         members = await get_members(self.conversation_id)
         await self.send(text_data=json.dumps({"messages": messages, "members": members, "mentioned": mentioned_groups}))
