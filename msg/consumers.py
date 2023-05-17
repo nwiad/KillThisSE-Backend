@@ -196,7 +196,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         conversations = [] 
         nowpeople = self.user
         
-        async for msg in Message.objects.filter(conversation_id=self.conversation_id).all():
+        async for msg in Message.objects.filter(conversation_id=self.conversation_id).order_by("create_time")[:50]:
             if msg.create_time is not None:
                 create_time = msg.create_time.astimezone(pytz.timezone('Asia/Shanghai')).strftime("%m-%d %H:%M")
             else:
@@ -233,8 +233,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # 获取本会话的所有其他成员
         members = await get_members(self.conversation_id)
         # 最后一条消息
-        last_msg= await get_last_msg()
-        last_msg_info = await async_serialize(last_msg)
+        last_msg = await get_last_msg()
+        if last_msg:
+            last_msg_info = await async_serialize(last_msg)
+        else:
+            last_msg_info = {}
 
         conversations = await get_conversation(nowpeople.user_id)
         # 给前端发送的消息
