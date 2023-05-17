@@ -60,15 +60,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     new_message.mentioned_members.add(member)
                     self.conversation.mentioned_members.add(member)
             
-            if transmit_with is not None:
-                for msg_id in transmit_with:
+            if is_transmit:
+                for msg_id in transmit_with_id:
                     msg = Message.objects.filter(msg_id=msg_id).first()
                     new_message.transmit_with.add(msg)
+                    print("加一个转发的消息++++++++=" + str(msg_id))
 
             self.conversation.save()
             new_message.save()
             return new_message
-        
+                
         text_data_json = json.loads(text_data)
         message = text_data_json["message"]
         token = text_data_json["token"]
@@ -88,9 +89,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # 这条消息提到了谁 返回一个name的列表
         mentioned_members: list = text_data_json.get("mentioned_members")
         # 转发消息
-        transmit_with = text_data_json.get("transmit_with")
-        is_transmit = transmit_with is not None
-
+        is_transmit = False
+        if(text_data_json.get("forward")):
+            is_transmit = text_data_json.get("forward") # 检查传入消息是否是多条转发消息
+        print("这是合并转发吗？")
+        print(is_transmit)
+        transmit_with_id = text_data_json.get("message") # 检查传入消息包含的转发的消息的id
+        print("转发的消息id列表" + str(transmit_with_id))
         # Check_for_login
         if not token:
             # TODO: Add more info
@@ -117,6 +122,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     await self.channel_layer.group_send(
                         str(self.conversation_id), {"type": "chat_message"}
                     )
+
 
     # Receive message
     async def chat_message(self, event):
@@ -164,10 +170,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
         @sync_to_async
         def get_conversation(user_id):
             """
-            获取这个用户的所有会话
+            获取这个用户目前的所有会话
             """
             conversations = Conversation.objects.filter(members__in=[user_id]).all()
-
+            # 满足disabled=False的会话
+            conversations = conversations.filter(disabled=False).all()
             conv = []
             for conversation in conversations:
                 if conversation.is_Private:
@@ -192,8 +199,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
         
         messages = []
         members = []
-        # 这个用户的所有会话
-        conversations = [] 
         nowpeople = self.user
         
         async for msg in Message.objects.filter(conversation_id=self.conversation_id).order_by("create_time")[:50]:
@@ -239,11 +244,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
         else:
             last_msg_info = {}
 
-        conversations = await get_conversation(nowpeople.user_id)
+        conv = await get_conversation(nowpeople.user_id)
         # 给前端发送的消息
         await self.send(text_data=json.dumps({"messages": messages, 
                                               "members": members, 
                                               "mentioned": mentioned_groups,
-                                              "conversations":conversations,
+                                              "conversations":conv,
                                               "last_msg": last_msg_info
                                               }))

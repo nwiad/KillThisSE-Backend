@@ -37,8 +37,6 @@ class Conversation(models.Model):
     mentioned_members = models.ManyToManyField(User, related_name="group_mentioned_members")
     # 需要二级验证的成员列表
     valid_members = models.ManyToManyField(User, related_name="valid_members")
-    # 是否弃用
-    disabled = models.BooleanField(default=False)
     
     
     
