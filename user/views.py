@@ -952,19 +952,21 @@ class UserViewSet(viewsets.ViewSet):
         user = get_user(req)
         body = json.loads(req.body.decode("utf-8"))
         conversation_id = body.get("group")
-        admin_id = body.get("admin")
+        admin_ids: list = body.get("admin")
         group_conversation = Conversation.objects.filter(conversation_id=conversation_id, is_Private=False).first()
         if not group_conversation:
             return request_failed(2, "Group not exist")
         if group_conversation.owner != user.user_id:
             return request_failed(3, "You are not the owner of this group")
-        admin = User.objects.get(user_id=admin_id).first()
-        if not admin:
-            return request_failed(4, "User not exist")
-        if admin not in group_conversation.administrators.all():
-            return request_failed(5, "The user is not an admin")
-        # Successful remove
-        group_conversation.administrators.remove(admin)
+        for admin_id in admin_ids:
+            admin = User.objects.get(user_id=admin_id).first()
+            if not admin:
+                return request_failed(4, "User not exist")
+            if admin not in group_conversation.administrators.all():
+                return request_failed(5, "The user is not an admin")
+            # Successful remove
+            group_conversation.administrators.remove(admin)
+        group_conversation.save()
         return request_success({"Removed": True})
     
     @action(detail=False, methods=["POST"])
