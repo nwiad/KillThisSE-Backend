@@ -249,6 +249,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({"messages": messages, 
                                               "members": members, 
                                               "mentioned": mentioned_groups,
-                                              "conversations":conv,
-                                              "last_msg": last_msg_info
+                                              "conversations": conv,
+                                              "last_msg": last_msg_info,
+                                              "len_of_msgs": len(messages)
                                               }))
