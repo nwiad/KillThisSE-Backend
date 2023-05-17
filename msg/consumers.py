@@ -134,7 +134,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return conversation_ids
 
             
-        messages = []
         mentioned_groups = await get_mentioned_groups()
         
         
@@ -168,17 +167,27 @@ class ChatConsumer(AsyncWebsocketConsumer):
             获取这个用户的所有会话
             """
             conversations = Conversation.objects.filter(members__in=[user_id]).all()
-            #存储conv里面 每个元素的会话id  name 和 avatar
-            conv = [
-                {
-                    'id': conversation.conversation_id,  # 使用实际的字段名替换这里的 id
-                    'name': conversation.conversation_name,  # 使用实际的字段名替换这里的 name
-                    'avatar': conversation.conversation_avatar,  # 使用实际的字段名替换这里的 avatar
+
+            conv = []
+            for conversation in conversations:
+                if conversation.is_Private:
+                    # Private chat
+                    # member的成员是User, 应当用members里面的User对象的user_id和我的user_id比较
+                    other_member = conversation.members.exclude(user_id=user_id).first()
+                    name = other_member.name if other_member else "Unknown User"
+                else:
+                    # Group chat
+                    name = conversation.conversation_name
+                
+                conv.append({
+                    'id': conversation.conversation_id,
+                    'name': name,
+                    'avatar': conversation.conversation_avatar,
                     'is_group': not conversation.is_Private,
-                }
-                for conversation in conversations
-            ]
+                })
+
             return conv
+
             
         
         messages = []
