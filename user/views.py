@@ -248,13 +248,13 @@ class UserViewSet(viewsets.ViewSet):
         friend_user_id = body.get('friend_user_id')
         friend = User.objects.filter(user_id=friend_user_id).first()
         if not friend:
-            return request_failed(1, "target Friend not exist")
+            return request_failed(2, "target Friend not exist")
         
         if isFriend(user, friend):
-            return request_failed(2, "Already become friends")
+            return request_failed(3, "Already become friends")
         
         if requestExists(user, friend):
-            return request_failed(3, "Request already exists")
+            return request_failed(4, "Request already exists")
         elif requestExists(friend, user): 
             addFriends(user, friend)
             requestExists(friend, user).delete()
