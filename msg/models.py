@@ -85,6 +85,8 @@ class Message(models.Model):
     file_url = models.CharField(max_length=MAX_CHAR_LENGTH, default=None, null=True)
     # 是否引用其他消息
     quote_with = models.IntegerField(default=-1)
+    # 被引用次数
+    quoted_num = models.IntegerField(default=0)
     # 是否是转发消息
     is_transmit = models.BooleanField(default=False)
     # 转发的消息列表
@@ -112,6 +114,7 @@ class Message(models.Model):
             "is_audio": self.is_audio,
             "is_video": self.is_video,
             "quote_with": self.quote_with,
+            "quoted_num": self.quoted_num,
             "mentioned_members": [
                 member.user_id for member in self.mentioned_members.all()
             ],
