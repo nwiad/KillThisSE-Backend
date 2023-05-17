@@ -85,17 +85,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
         
         deleted_msg_id = text_data_json.get("deleted_msg_id")
         withdraw_msg_id = text_data_json.get("withdraw_msg_id")  # 检查传入消息是否包含 withdraw
-        quote_with = text_data_json.get("quote_with") if text_data_json.get("quote_with") is not None else -1 # 检查传入消息是否引用了其他消息
-        # 这条消息提到了谁 返回一个name的列表
+        
+        # 检查传入消息是否引用了其他消息 quote_with是被回复的消息的id
+        quote_with = text_data_json.get("quote_with") if text_data_json.get("quote_with") is not None else -1 
+        print("quote!!!!\n\n\n\n")
+        print(quote_with)
+        # @ 这条消息提到了谁 返回一个name的列表
         mentioned_members: list = text_data_json.get("mentioned_members")
         # 转发消息
         is_transmit = False
         if(text_data_json.get("forward")):
             is_transmit = text_data_json.get("forward") # 检查传入消息是否是多条转发消息
-        print("这是合并转发吗？")
-        print(is_transmit)
         transmit_with_id = text_data_json.get("message") # 检查传入消息包含的转发的消息的id
-        print("转发的消息id列表" + str(transmit_with_id))
+
         # Check_for_login
         if not token:
             # TODO: Add more info
