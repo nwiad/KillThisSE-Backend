@@ -90,7 +90,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         quote_with = text_data_json.get("quote_with") if text_data_json.get("quote_with") is not None else -1 
         print("quote!!!!\n\n\n\n")
         print(quote_with)
-        if quote_with:
+        if quote_with != -1:
             quoted_msg = await Message.objects.aget(msg_id=quote_with)
             quoted_msg.quoted_num += 1
             quoted_msg.save()
