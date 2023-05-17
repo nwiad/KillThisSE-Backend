@@ -1070,10 +1070,9 @@ class UserViewSet(viewsets.ViewSet):
         if not user in group_conversation.members.all():
             return request_failed(3, "You are not in this group")
         members = list(group_conversation.members.all())
-        real_members = group_conversation.members.all()
         # 不返回群主和管理员
-        for member, real_member in zip(members, real_members):
-            if (real_member.user_id == group_conversation.owner) or (real_member in group_conversation.administrators.all()):
+        for member in members[:]:
+            if (member.user_id == group_conversation.owner) or (member in group_conversation.administrators.all()):
                 members.remove(member)
 
         return_data = {
