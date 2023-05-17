@@ -543,7 +543,8 @@ class UserViewSet(viewsets.ViewSet):
             return request_failed(3, "You are not in this conversation")
         friend = conversation.members.all().exclude(user_id=user.user_id).first()
         return_data = {
-            "friend": friend.serialize()
+            "friend": friend.serialize(),
+            "user": user.serialize()
         }
         return request_success(return_data)
 
@@ -844,7 +845,7 @@ class UserViewSet(viewsets.ViewSet):
         if valid == "True":
             conversation.valid_members.add(user)
         elif user in conversation.valid_members.all():
-            conversation.valid.members.remove(user)
+            conversation.valid_members.remove(user)
         return request_success({"Modified": True})
 
     @action(detail=False, methods=["POST"])
@@ -1200,7 +1201,7 @@ class UserViewSet(viewsets.ViewSet):
         conversation = Conversation.objects.filter(conversation_id=conversation_id).first()
         if not conversation:
             return request_failed(2, "Conversation does not exist")
-        msg_list = Message.objects.filter(conversation_id=conversation_id)
+        msg_list = Message.objects.filter(conversation_id=conversation_id).all()
         unread_msg_list = [msg for msg in msg_list if (user not in msg.read_members.all() and user.user_id != msg.sender_id)]
         return request_success({"UnreadMessages": len(unread_msg_list)})
     
