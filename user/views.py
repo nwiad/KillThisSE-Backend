@@ -1101,7 +1101,7 @@ class UserViewSet(viewsets.ViewSet):
         """
         获取群聊所有成员的id列表
         """
-        user = get_user(user)
+        user = get_user(req)
         body = json.loads(req.body.decode("utf-8"))
         group_id = body.get("group")
         group_conversation = Conversation.objects.filter(conversation_id=group_id, is_Private=False).first()
@@ -1119,7 +1119,7 @@ class UserViewSet(viewsets.ViewSet):
         """
         获取用户在群聊的身份
         """
-        user = get_user(user)
+        user = get_user(req)
         body = json.loads(req.body.decode("utf-8"))
         group_id = body.get("group")
         group_conversation = Conversation.objects.filter(conversation_id=group_id, is_Private=False).first()
