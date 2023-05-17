@@ -959,7 +959,7 @@ class UserViewSet(viewsets.ViewSet):
         if group_conversation.owner != user.user_id:
             return request_failed(3, "You are not the owner of this group")
         for admin_id in admin_ids:
-            admin = User.objects.get(user_id=admin_id).first()
+            admin = User.objects.filter(user_id=admin_id).first()
             if not admin:
                 return request_failed(4, "User not exist")
             if admin not in group_conversation.administrators.all():
