@@ -1106,6 +1106,31 @@ class UserViewSet(viewsets.ViewSet):
         members = group_conversation.members.all()
         return_data = [member.user_id for member in members]
         return request_success(return_data)
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def get_member_status(self, req: HttpRequest):
+        """
+        获取用户在群聊的身份
+        """
+        user = get_user(user)
+        body = json.loads(req.body.decode("utf-8"))
+        group_id = body.get("group")
+        group_conversation = Conversation.objects.filter(conversation_id=group_id, is_Private=False).first()
+        if not group_conversation:
+            return request_failed(2, "Group does not exist")
+        if not user in group_conversation.members.all():
+            return request_failed(3, "You are not in this group")
+        member_id = body.get("member")
+        member = User.objects.filter(user_id=member_id).first()
+        if not member:
+            return request_failed(4, "Member does not exist")
+        return_data = {
+            "is_admin": member in group_conversation.administrators.all(),
+            "is_owner": member_id == group_conversation.owner
+        }
+        return request_success(return_data)
+        
         
 
     # endregion
