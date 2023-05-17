@@ -1271,6 +1271,27 @@ class UserViewSet(viewsets.ViewSet):
         }
         return request_success(return_data)        
 
+
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def query_forward_records(self, req: HttpRequest):
+        """
+        根据消息id查询转发过来的聊天记录  根据消息id
+        """
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        msgid_list = body.get("msgidlist")
+        if not msgid_list:
+            return request_failed(1, "Message id list is empty")
+        
+        msg_list = Message.objects.filter(msg_id__in=msgid_list).all()
+        return_data = {
+            "messages": [
+                msg.serialize() for msg in msg_list
+            ]
+        }
+        return request_success(return_data)   
+
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def query_by_sender(self, req: HttpRequest):
