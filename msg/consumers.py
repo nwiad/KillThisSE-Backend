@@ -186,7 +186,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         conversations = [] 
         nowpeople = self.user
         
-        async for msg in Message.objects.filter(conversation_id=self.conversation_id).all():
+        async for msg in Message.objects.filter(conversation_id=self.conversation_id).order_by("-create_time")[:50]:
             if msg.create_time is not None:
                 create_time = msg.create_time.astimezone(pytz.timezone('Asia/Shanghai')).strftime("%m-%d %H:%M")
             else:
