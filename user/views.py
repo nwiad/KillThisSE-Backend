@@ -845,7 +845,7 @@ class UserViewSet(viewsets.ViewSet):
         if valid == "True":
             conversation.valid_members.add(user)
         elif user in conversation.valid_members.all():
-            conversation.valid.members.remove(user)
+            conversation.valid_members.remove(user)
         return request_success({"Modified": True})
 
     @action(detail=False, methods=["POST"])
