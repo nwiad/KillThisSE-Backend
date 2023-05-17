@@ -174,6 +174,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     'id': conversation.conversation_id,  # 使用实际的字段名替换这里的 id
                     'name': conversation.conversation_name,  # 使用实际的字段名替换这里的 name
                     'avatar': conversation.conversation_avatar,  # 使用实际的字段名替换这里的 avatar
+                    'is_group': not conversation.is_Private,
                 }
                 for conversation in conversations
             ]
