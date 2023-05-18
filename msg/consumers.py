@@ -69,6 +69,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.conversation.save()
             new_message.save()
             return new_message
+        
+        @sync_to_async
+        def set_quote_info():
+            if quote_with != -1:
+                quoted_msg = Message.objects.get(msg_id=quote_with)
+                quoted_msg.quoted_num += 1
+                quoted_msg.save()
                 
         text_data_json = json.loads(text_data)
         message = text_data_json["message"]
@@ -90,10 +97,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         quote_with = text_data_json.get("quote_with") if text_data_json.get("quote_with") is not None else -1 
         print("quote!!!!\n\n\n\n")
         print(quote_with)
-        if quote_with != -1:
-            quoted_msg = await Message.objects.aget(msg_id=quote_with)
-            quoted_msg.quoted_num += 1
-            quoted_msg.save()
+        await set_quote_info()
         # @ 这条消息提到了谁 返回一个name的列表
         mentioned_members: list = text_data_json.get("mentioned_members")
         # 转发消息
