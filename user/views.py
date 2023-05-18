@@ -324,6 +324,16 @@ class UserViewSet(viewsets.ViewSet):
             "conversation_len": len(Conversation.objects.all())
         }
         return request_success(return_data)
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def get_avatar(self, req: HttpRequest):
+        body = json.loads(req.body.decode("utf-8"))
+        name = body.get("name")
+        target = User.objects.filter(name=name).first()
+        if not target:
+            return request_failed(2, "Target user does not exist")
+        return request_success({"avatar": target.avatar})
 
 # region 搜好友相关功能    
     @action(detail=False, methods=["POST"])
