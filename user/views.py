@@ -317,7 +317,7 @@ class UserViewSet(viewsets.ViewSet):
     def get_profile(self, req: HttpRequest):
         user = get_user(req)
 
-        sig = api(user.user_id)
+        sig = api.gen_sig(user.user_id)
 
         return_data = {
             "user_id": user.user_id,
