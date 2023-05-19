@@ -11,10 +11,20 @@ from asgiref.sync import sync_to_async
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        @sync_to_async
+        def get_user():
+            user = User.objects.filter(user_id=self.user_id).first()
+            return user
+        
+        @sync_to_async
+        def get_conversation():
+            conversation = Conversation.objects.filter(conversation_id=self.conversation_id).first()
+            return conversation
+
         self.conversation_id = self.scope['url_route']['kwargs']['conversation_id']
         self.user_id = self.scope['url_route']['kwargs']['user_id']
-        self.conversation = await Conversation.objects.aget(conversation_id=self.conversation_id)
-        self.user = await User.objects.aget(user_id=self.user_id)
+        self.conversation = await get_conversation()
+        self.user = await get_user()
         await self.channel_layer.group_add(str(self.conversation_id), self.channel_name)
         await self.channel_layer.group_send(str(self.conversation_id), {"type": "chat_message"})
         await self.accept()
@@ -64,7 +74,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 for msg_id in transmit_with_id:
                     msg = Message.objects.filter(msg_id=msg_id).first()
                     new_message.transmit_with.add(msg)
-                    print("加一个转发的消息++++++++=" + str(msg_id))
+                    # print("加一个转发的消息++++++++=" + str(msg_id))
 
             self.conversation.save()
             new_message.save()
@@ -95,8 +105,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
         
         # 检查传入消息是否引用了其他消息 quote_with是被回复的消息的id
         quote_with = text_data_json.get("quote_with") if text_data_json.get("quote_with") is not None else -1 
-        print("quote!!!!\n\n\n\n")
-        print(quote_with)
+        # print("quote!!!!\n\n\n\n")
+        # print(quote_with)
         await set_quote_info()
         # @ 这条消息提到了谁 返回一个name的列表
         mentioned_members: list = text_data_json.get("mentioned_members")

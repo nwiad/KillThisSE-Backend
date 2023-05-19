@@ -96,7 +96,6 @@ class UserViewSet(viewsets.ViewSet):
         # Successful login
         token = Token.objects.update_or_create(user=user)
         token = Token.objects.get(user=user).key
-        # print(token)
         return request_success({"Logged in": True, "Token": token})
    
     # 登录时 发送验证码
@@ -184,7 +183,6 @@ class UserViewSet(viewsets.ViewSet):
         body = json.loads(req.body.decode("utf-8"))
         pwd = body.get("password")
         new_email = body.get("email")
-        print("new email: ", new_email)
         if not user.check_password(pwd):
             return request_failed(2, "Wrong password")
         user.user_email = new_email
@@ -899,7 +897,6 @@ class UserViewSet(viewsets.ViewSet):
                 return request_failed(5, "User does not exist")
             if (not user.user_id == group_conversation.owner) and member in group_conversation.administrators.all():
                 return request_failed(3, "Permission denied")
-            print(group_conversation.members.all())
             if member not in group_conversation.members.all():
                 return request_failed(4, f"{member.name} is not in the group")
             group_conversation.members.remove(member)
@@ -1255,7 +1252,6 @@ class UserViewSet(viewsets.ViewSet):
         """
         设置已读的位置
         """
-        print("Hello")
         user = get_user(req)
         body = json.loads(req.body.decode("utf-8"))
         conversation_id = body.get("conversation")
