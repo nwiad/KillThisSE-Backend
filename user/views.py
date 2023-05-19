@@ -317,12 +317,15 @@ class UserViewSet(viewsets.ViewSet):
     def get_profile(self, req: HttpRequest):
         user = get_user(req)
 
+        sig = api(user.user_id)
+
         return_data = {
             "user_id": user.user_id,
             "name": user.name,
             "avatar": user.avatar,
             "email": user.user_email,
-            "conversation_len": len(Conversation.objects.all())
+            "conversation_len": len(Conversation.objects.all()),
+            "sig": sig
         }
         return request_success(return_data)
     
