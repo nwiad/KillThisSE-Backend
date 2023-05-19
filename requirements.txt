@@ -14,3 +14,5 @@ pytest-django
 coverage
 
 uWSGI
+
+tls-sig-api-v2

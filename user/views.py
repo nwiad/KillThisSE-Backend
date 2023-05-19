@@ -15,6 +15,9 @@ from utils.utils_verify import get_user, verify_user
 from utils.utils_friends import isFriend, requestExists, addFriends, sendFriendRequest
 import random
 import time
+import TLSSigAPIv2
+
+api = TLSSigAPIv2.TLSSigAPIv2(1400811921, "d03af2f895d19f0f4f5fb180b3d79e9a8e6ae29e70a0553f5d8f0dd92d9bb693")
 
 def check_for_user_data(body):
     name = require(body, "name", "string", err_msg="Missing or error type of [name]")
@@ -1409,3 +1412,15 @@ class UserViewSet(viewsets.ViewSet):
             ]
         }
         return request_success(return_data)
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def get_sig(self, req: HttpRequest):
+        """
+        获取用户sig
+        """
+        user = get_user(req)
+        user_id = user.user_id
+        sig = api.gen_sig(user_id)
+        print(sig)
+        return request_success({"sig": sig})
