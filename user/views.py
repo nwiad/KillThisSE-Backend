@@ -1510,10 +1510,10 @@ class UserViewSet(viewsets.ViewSet):
                     break
                 else:
                     pass
-                time.sleep(3)
+                time.sleep(1)
                 endtime = time.time()
-                if endtime - startTime > 12:
-                    return request_failed({"Result": "获取结果超时"})
+                if endtime - startTime > 6:
+                    return request_success({"Result": "[获取结果超时]"})
             resp1 = client.DescribeTaskStatus(req1)
             result = resp1.Data.Result.split()[1]
             return request_success({"Result": result})
