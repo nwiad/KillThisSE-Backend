@@ -1519,4 +1519,4 @@ class UserViewSet(viewsets.ViewSet):
             return request_success({"Result": result})
 
         except TencentCloudSDKException as err:
-            return request_failed(2, err)
+            return request_success({"Result": "[莫名原因失败了]"})
