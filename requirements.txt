@@ -16,3 +16,5 @@ coverage
 uWSGI
 
 tls-sig-api-v2
+tencentcloud-sdk-python-asr
+tencentcloud-sdk-python

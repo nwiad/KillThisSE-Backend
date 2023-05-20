@@ -17,6 +17,12 @@ import random
 import time
 import TLSSigAPIv2
 
+from tencentcloud.common import credential
+from tencentcloud.common.profile.client_profile import ClientProfile
+from tencentcloud.common.profile.http_profile import HttpProfile
+from tencentcloud.common.exception.tencent_cloud_sdk_exception import TencentCloudSDKException
+from tencentcloud.asr.v20190614 import asr_client, models
+
 api = TLSSigAPIv2.TLSSigAPIv2(1400811921, "d03af2f895d19f0f4f5fb180b3d79e9a8e6ae29e70a0553f5d8f0dd92d9bb693")
 
 def check_for_user_data(body):
@@ -1464,3 +1470,57 @@ class UserViewSet(viewsets.ViewSet):
         for member in msg.read_members.all():
             read_members.append({"name": member.name, "avatar": member.avatar})
         return request_success({"read_members": read_members})
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def get_taskid(self, req: HttpRequest):
+        body = json.loads(req.body.decode("utf-8"))
+        url = body.get("url")
+        try:
+            cred = credential.Credential("AKIDlQwHRMdmaFhx01d2C6nGSO5VgbIkwsXy", "GIqB9vUr1yhBSUFkyCnAHAsNdeS2Rksl")
+            client = asr_client.AsrClient(cred, "")
+
+            # 实例化一个请求对象,每个接口都会对应一个request对象
+            req = models.CreateRecTaskRequest()
+            params = {
+                "EngineModelType": "16k_zh-PY",
+                "ChannelNum": 1,
+                "ResTextFormat": 0,
+                "SourceType": 0,
+                "Url": url
+            }
+            req.from_json_string(json.dumps(params))
+
+            # 返回的resp是一个CreateRecTaskResponse的实例，与请求对象对应
+            resp = client.CreateRecTask(req)
+
+            TaskId = resp.Data.TaskId
+            return request_success({"TaskId": TaskId})
+
+        except TencentCloudSDKException as err:
+            return request_failed(2, err)
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def voice2text(self, req: HttpRequest):
+        body = json.loads(req.body.decode("utf-8"))
+        taskid = body.get("taskid")
+        try:
+            cred = credential.Credential("AKIDlQwHRMdmaFhx01d2C6nGSO5VgbIkwsXy", "GIqB9vUr1yhBSUFkyCnAHAsNdeS2Rksl")
+            client = asr_client.AsrClient(cred, "ap-guangzhou")
+
+            # 实例化一个请求对象,每个接口都会对应一个request对象
+            req = models.DescribeTaskStatusRequest()
+            params = {
+                "TaskId": taskid
+            }
+            req.from_json_string(json.dumps(params))
+
+            # 返回的resp是一个DescribeTaskStatusResponse的实例，与请求对象对应
+            resp = client.DescribeTaskStatus(req)
+
+            result = resp.Data.Result.split()[1]
+            return request_success({"Result": result})
+
+        except TencentCloudSDKException as err:
+            return request_failed(2, err)
