@@ -144,21 +144,27 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 await self.channel_layer.group_send(
                     str(self.conversation_id), {"type": "chat_message"}
                 )
-            else :
+            else:
                 if deleted_msg_id:  # 如果是一个删除
                     await delete_msg(deleted_msg_id, sender)
                     await self.channel_layer.group_send(
                         str(self.conversation_id), {"type": "chat_message"}
                     )
                 else:  # 如果不是一个删除操作 则发送普通聊天消息
-                    await create_message()
-                    await self.channel_layer.group_send(
-                        str(self.conversation_id), {"type": "chat_message"}
-                    )
+                    if read is None:
+                        await create_message()
+                        await self.channel_layer.group_send(
+                            str(self.conversation_id), {"type": "chat_message"}
+                        )
+                    else:
+                        await self.channel_layer.group_send(
+                            str(self.conversation_id), {"type": "chat_message", "refresh": True}
+                        )
 
 
     # Receive message
     async def chat_message(self, event):
+        refresh: bool = event.get("refresh") if event.get("refresh") is not None else False 
         @sync_to_async
         def del_message():        
             return [one.user_id for one in msg.delete_members.all()]
@@ -253,7 +259,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         members = []
         nowpeople = self.user
         
-        async for msg in Message.objects.filter(conversation_id=self.conversation_id).order_by("create_time")[:20]:
+        async for msg in Message.objects.filter(conversation_id=self.conversation_id).order_by("create_time").all():
             if msg.create_time is not None:
                 create_time = msg.create_time.astimezone(pytz.timezone('Asia/Shanghai')).strftime("%m-%d %H:%M")
             else:
@@ -287,7 +293,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 "transmit_with": [
                     await async_serialize(m_msg) async for m_msg in msg.transmit_with.all()
                 ],
-                "is_read": await get_friend_read(msg)            
+                "is_read": await get_friend_read(msg),            
             })
         
         # 获取本会话的所有其他成员
@@ -308,5 +314,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
                                               "last_msg": last_msg_info,
                                               "len_of_msgs": len(messages),
                                               "unread_msgs": await get_unread_messages(),
-                                              "mentioned": await check_mentioned()
+                                              "mentioned": await check_mentioned(),
+                                              "refresh": refresh
                                               }))
