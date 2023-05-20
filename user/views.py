@@ -1266,6 +1266,7 @@ class UserViewSet(viewsets.ViewSet):
         conversation = Conversation.objects.filter(conversation_id=conversation_id).first()
         if not conversation:
             return request_failed(2, "Conversation does not exist")
+        # 在两次的之间 获取谁读了这个消息  修改msg里面的信息
         msg_id = body.get("msg_id")
         if msg_id == -1:
             return request_success({"Message List Empty": True})
@@ -1273,7 +1274,7 @@ class UserViewSet(viewsets.ViewSet):
         if msg_list.first() is None:
             return request_failed(3, "Message does not exist")
         # 标记为已读
-        for msg in msg_list:
+        for msg in msg_list:          
             msg.read_members.add(user)
         msg.save()
         # 消除被mention的标记
@@ -1432,3 +1433,18 @@ class UserViewSet(viewsets.ViewSet):
         sig = api.gen_sig(user_id)
         print(sig)
         return request_success({"sig": sig})
+
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def get_mentioned_members(self, req: HttpRequest):
+        '''
+        获取已读被@的成员
+        '''
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        msgid = body.get("msg_id")
+        msg = Message.objects.filter(msg_id=msgid).first()
+        mention_members = []
+        for member in msg.mentioned_members.all():
+            mention_members.append({"name": member.name, "read": member in msg.read_members.all(), "avatar": member.avatar})
+        return request_success({"mentioned_members": mention_members})

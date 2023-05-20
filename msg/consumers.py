@@ -65,8 +65,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
             
             if mentioned_members is not None:
+                
                 for member_name in mentioned_members:
-                    member = User.objects.filter(name=member_name).first()
+                    member = User.objects.filter(name = member_name).first()
                     new_message.mentioned_members.add(member)
                     self.conversation.mentioned_members.add(member)
             
