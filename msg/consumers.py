@@ -105,8 +105,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         
         # 检查传入消息是否引用了其他消息 quote_with是被回复的消息的id
         quote_with = text_data_json.get("quote_with") if text_data_json.get("quote_with") is not None else -1 
-        # print("quote!!!!\n\n\n\n")
-        # print(quote_with)
+
         await set_quote_info()
         # @ 这条消息提到了谁 返回一个name的列表
         mentioned_members: list = text_data_json.get("mentioned_members")

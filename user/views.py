@@ -177,8 +177,6 @@ class UserViewSet(viewsets.ViewSet):
         user.save()
         return request_success({"Modified": True})
     
-        # 注册时向邮箱发送验证码
-
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def reset_email(self, req: HttpRequest):
