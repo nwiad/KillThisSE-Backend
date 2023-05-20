@@ -144,14 +144,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 await self.channel_layer.group_send(
                     str(self.conversation_id), {"type": "chat_message"}
                 )
-            else :
+            else:
                 if deleted_msg_id:  # 如果是一个删除
                     await delete_msg(deleted_msg_id, sender)
                     await self.channel_layer.group_send(
                         str(self.conversation_id), {"type": "chat_message"}
                     )
                 else:  # 如果不是一个删除操作 则发送普通聊天消息
-                    await create_message()
+                    if not read:
+                        await create_message()
                     await self.channel_layer.group_send(
                         str(self.conversation_id), {"type": "chat_message"}
                     )
