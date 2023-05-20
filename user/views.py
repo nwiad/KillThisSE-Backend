@@ -1277,6 +1277,7 @@ class UserViewSet(viewsets.ViewSet):
         for msg in msg_list:          
             msg.read_members.add(user)
         msg.save()
+                        
         # 消除被mention的标记
         if user in conversation.mentioned_members.all():
             conversation.mentioned_members.remove(user)
@@ -1448,3 +1449,18 @@ class UserViewSet(viewsets.ViewSet):
         for member in msg.mentioned_members.all():
             mention_members.append({"name": member.name, "read": member in msg.read_members.all(), "avatar": member.avatar})
         return request_success({"mentioned_members": mention_members})
+    
+    @action(detail=False, methods=["POST"])
+    @CheckLogin
+    def get_read_members(self, req: HttpRequest):
+        '''
+        获取已读本条消息的成员
+        '''
+        user = get_user(req)
+        body = json.loads(req.body.decode("utf-8"))
+        msgid = body.get("msg_id")
+        msg = Message.objects.filter(msg_id=msgid).first()
+        read_members = []
+        for member in msg.read_members.all():
+            read_members.append({"name": member.name, "avatar": member.avatar})
+        return request_success({"read_members": read_members})

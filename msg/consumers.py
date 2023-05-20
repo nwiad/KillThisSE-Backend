@@ -267,6 +267,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 "transmit_with": [
                     await async_serialize(m_msg) async for m_msg in msg.transmit_with.all()
                 ],
+                "is_read": msg.is_read                
             })
         
         # 获取本会话的所有其他成员
