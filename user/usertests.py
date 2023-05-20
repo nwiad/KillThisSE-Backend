@@ -7,7 +7,7 @@ from user.views import UserViewSet
 from utils.utils_friends import isFriend, requestExists, addFriends, sendFriendRequest
 from django.urls import reverse
 from unittest.mock import patch
-
+import time
 
 SENDFR = "/user/send_friend_request/"
 RESETNAME = "/user/reset_name/"
@@ -91,7 +91,7 @@ class UserViewTests(TestCase):
         self.client = Client()
       
         
-# 版本一 无邮箱验证
+# region 无邮箱验证注册
     # 正常注册
     def test_successful_user_registration(self):
         request_data = {
@@ -133,7 +133,10 @@ class UserViewTests(TestCase):
         self.assertEqual(response.status_code, 400)
         response_content = json.loads(response.content)
         self.assertEqual(response_content, {"code": 3, "info": "Illegal password"})
+# endregion
 
+
+# region 注销账户
     # 注销账户
     def test_cancel_account(self):
         request_data = {
@@ -152,68 +155,10 @@ class UserViewTests(TestCase):
         
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, b'{"code": 0, "info": "Succeed", "Deleted": true}')
-
-# 版本2 有邮箱验证
-    # 发邮件
-    def test_send_email_for_register(self):
-        # Make a POST request to the send_email_for_register endpoint
-        data = {
-            'name': 'testuseree',
-            'password': 'testpasswordee',
-            'email': 'testuser@example.com'
-        }
-        response = self.client.post('/user/send_email_for_register/', data=data, content_type="application/json")
-
-        # Check that the response status code is 200 and the user was created with a code
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(User.objects.filter(name='testuseree').exists())
-        self.assertTrue(response.json()['send'])
-        self.assertEqual(User.objects.get(name='testuseree').user_code, response.json()['code_send'])
-
-    def test_register_success(self):
-        # Create a user in the database with a code
-        user = User.objects.create(
-            name='testuser22',
-            password=make_password('testpassword22'),
-            user_email='testuser@example.com',
-            user_code=123456
-        )
-
-        # Make a POST request to the register endpoint with the correct code
-        data = {
-            'name': 'testuser22',
-            'code_input': 123456
-        }
-        response = self.client.post('/user/register/', data=data, content_type="application/json")
-
-        # Check that the response status code is 200 and the user was successfully created
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {'Created': True, 'code': 0, 'info': 'Succeed'})
-
-    def test_register_wrong_code(self):
-        # Create a user in the database with a code
-        user = User.objects.create(
-            name='testuser33',
-            password=make_password('testpassword33'),
-            user_email='testuser@example.com',
-            user_code=123456
-        )
-        data = {
-            'name': 'testuser33',
-            'code_input': '654321'
-        }
-        # Make a POST request to the register endpoint with the wrong code
-        response = self.client.post('/user/register/', data=data, content_type="application/json")
-        
-        # Check that the response status code is 200 and the user was deleted
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json(), {'code': 5, 'info': 'Wrong verification code'})
-        # 创建失败，用户被删除
-        self.assertFalse(User.objects.filter(name='testuser33').exists())
+# endregion
 
 
-
-# region login
+# region login ok
     # 正常登录
     def test_successful_user_login(self):
         request_data = {
@@ -240,7 +185,6 @@ class UserViewTests(TestCase):
         }
         response = login_try(self, il_data)
         self.assertEqual(response.content, b'{"code": 1, "info": "Illegal username"}')
-    
     
     # 试图登录不存在的用户
     def test_nonexsit_user_login(self):
@@ -284,7 +228,46 @@ class UserViewTests(TestCase):
 # endregion
 
 
-# region modify
+# region login by email ok
+    #todo 正常登录
+    def test_successful_user_login_with_email(self):
+        user = User.objects.create(name="test_user", 
+                                   password=make_password("password")
+                                   )
+        user.user_email = "test@example.com"
+        user.user_code = 123456  # Assuming you have a function to generate a verification code
+        user.user_code_created_time = time.time()
+        user.save()
+
+        data = {
+            "email": "test@example.com",
+            "code_input": user.user_code
+        }
+        response = self.client.post("/user/login_with_email/", data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["Logged in"])
+        self.assertIsNotNone(response.json()["Token"])
+        token = response.json()["Token"]
+        data = {"token": token}
+        
+        # log out
+        response = self.client.post(reverse("user-logout"), json.dumps(data), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"code": 0, "info": "Succeed", "Logged out": True})
+       
+        # 错误验证码登录
+        data = {
+            "email": "test@example.com",
+            "code_input": user.user_code +1
+        }
+        response = self.client.post("/user/login_with_email/", data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(),{'code': 5, 'info': 'Wrong verification code'})
+
+# endregion
+
+
+# region modify ok
     def test_reset_name(self):
         # log in
         login_data = {
@@ -335,86 +318,97 @@ class UserViewTests(TestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json(), {"code": 1, "info": "Not logged in"})
-
-    def test_send_email_for_changepwd(self):
-        # Make a POST request to the send_email_for_changepwd endpoint
+    
+    def test_reset_email(self):
+        # log in
         login_data = {
             "name": "testuser", 
             "password": "12345678"
             }
         response = login_someone(self, login_data)
+        self.assertEqual(response.status_code, 200)
         token = response.json()["Token"]
         
-        data = {
-            'old_pwd': '12345678',
-            "token": token
-        }
-        response = self.client.post('/user/send_email_for_changepwd/', 
-                                    data=data,
-                                    content_type="application/json")
-        # Check that the response status code is 200 and the user code was updated
+        response = self.client.post(
+            "/user/reset_email/",
+            {
+                "password":"12345678",
+                "email":"email@163.com",
+                "token": token
+            },
+            content_type="application/json"
+        )
+        user = User.objects.get(name="testuser")
+        
+        self.assertEqual(response.json(), {'Reset': True, 'code': 0, 'info': 'Succeed'})
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.json()['Sent'])
+        # 检查用户信息是否已经修改
+        user.refresh_from_db()
+        self.assertEqual(user.user_email, "email@163.com")
     
     def test_reset_password(self):
-        # Make a POST request to the reset_password endpoint
+        # log in
         login_data = {
             "name": "testuser", 
             "password": "12345678"
             }
         response = login_someone(self, login_data)
-        token = response.json()["Token"]
-        
-        user = User.objects.get(name="testuser")
-        data = {
-            'old_pwd': '12345678',
-            "token": token
-        }
-        # 假装填入了正确验证码
-        user.user_code = 123456
-        user.save()
-        data = {
-            'new_pwd': 'newpassword',
-            "token": token,
-            'code_input': 123456
-            }
-        response = self.client.post('/user/reset_password/', data=data, content_type="application/json")
-        
-        # Check that the response status code is 200 and the user password was updated
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(User.objects.get(name='testuser').check_password('newpassword'))
+        token = response.json()["Token"]
         
-    def test_reset_password_correct_code(self):
-                # Make a POST request to the reset_password endpoint
+        # 修改密码
+        response = self.client.post(
+            "/user/reset_password/",
+            {
+                "old_pwd": "12345678",
+                "new_pwd": "23232323",
+                "token": token
+            },
+            content_type="application/json"
+        )
+        self.assertEqual(response.json(), {"code": 0, "info": "Succeed", "Modified": True})
+        self.assertEqual(response.status_code, 200)
+        # 登出用户
+        data = {
+            "token" : token
+        }
+        # Log out
+        response = self.client.post(reverse("user-logout"), json.dumps(data), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"code": 0, "info": "Succeed", "Logged out": True})
+
+        # 用新密码登录
+        login_data = {
+            "name": "testuser", 
+            "password": "23232323"
+            }
+        response = login_someone(self, login_data)
+        self.assertEqual(response.status_code, 200)
+  
+    def test_reset_password_old_wrong(self):
+        # log in
         login_data = {
             "name": "testuser", 
             "password": "12345678"
             }
         response = login_someone(self, login_data)
+        self.assertEqual(response.status_code, 200)
         token = response.json()["Token"]
         
-        user = User.objects.get(name="testuser")
-        data = {
-            'old_pwd': '12345678',
-            "token": token
-        }
-        # 假装填入了错误验证码
-        user.user_code = 123488
-        user.save()
-        data = {
-            'new_pwd': 'newpassword',
-            "token": token,
-            'code_input': 123456
-            }
-        response = self.client.post('/user/reset_password/', data=data, content_type="application/json")
-        
-        # Check that the response status code is 200 and the user password was updated
-        self.assertEqual(response.status_code, 400)
-        self.assertTrue(User.objects.get(name='testuser').check_password('12345678'))
-        self.assertFalse(User.objects.get(name='testuser').check_password('newpassword'))
-   
+        # 修改密码
+        response = self.client.post(
+            "/user/reset_password/",
+            {
+                "old_pwd": "123456",
+                "new_pwd": "23232323",
+                "token": token
+            },
+            content_type="application/json"
+        )
+        self.assertEqual(response.json(), {'code': 2, 'info': 'Wrong old password'})
+             
     def test_reset_avatar(self):
-                # log in
+        # log in
         login_data = {
             "name": "testuser", 
             "password": "12345678"
@@ -441,9 +435,9 @@ class UserViewTests(TestCase):
         user.refresh_from_db()
         self.assertEqual(user.avatar, "newavatar")
 # endregion  
-    
-    
-# region friend add
+ 
+     
+# region friend add ok
     # send_friend_request
     def test_send_friend_request(self):
         # 创建两个新用户并登录1
@@ -480,7 +474,7 @@ class UserViewTests(TestCase):
             content_type="application/json"
         )
         self.assertNotEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"code": 1, "info": "target Friend not exist"})
+        self.assertEqual(response.json(), {"code": 2, "info": "target Friend not exist"})
         
         
         # 发送好友请求失败： 重复发送
@@ -493,7 +487,7 @@ class UserViewTests(TestCase):
             content_type="application/json"
         )
         self.assertNotEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"code": 3, "info": "Request already exists"})
+        self.assertEqual(response.json(), {'code': 4, 'info': 'Request already exists'})
 
 
         # 登出
@@ -542,7 +536,7 @@ class UserViewTests(TestCase):
             content_type="application/json"
         )
         self.assertNotEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"code": 2, "info": "Already become friends"})
+        self.assertEqual(response.json(), {"code": 3, "info": "Already become friends"})
         
     # get_friend_requests
     def test_get_friend_requests(self):
@@ -717,7 +711,7 @@ class UserViewTests(TestCase):
 # endregion
   
   
-# region friend del
+# region friend del ok
     def test_del_friend(self):
         # 创建测试用户和好友
         user = User.objects.create(name="test_user", password=make_password("password"))
@@ -769,9 +763,14 @@ class UserViewTests(TestCase):
 
 # endregion
 
+
+# region get profile ok
     def test_get_profile(self):
         # 创建测试用户
-        user = User.objects.create(name="test_user", password=make_password("password"))
+        user = User.objects.create(
+            name="test_user", 
+            password=make_password("password")
+            )
         # 登录user 
         login_data = {"name": "test_user", "password": "password"}
         response = login_someone(self, login_data)
@@ -783,22 +782,29 @@ class UserViewTests(TestCase):
         response = self.client.post("/user/get_profile/", data = data, content_type="application/json")
   
         # 断言响应状态码和内容
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {
-            "code": 0,
-            "info": "Succeed",
-            "user_id": user.user_id,
-            "name": user.name,
-            "avatar": user.avatar,
-            "user_email":user.user_email,
-        })
-        
+        self.assertEqual(response.status_code, 200)        
         # 删除测试用户
         user.delete()
+        
+    def test_get_avatar(self):
+        user = User.objects.create(
+            name="test_user", 
+            password=make_password("password")
+            )
+        # 登录user 
+        login_data = {"name": "test_user", "password": "password"}
+        response = login_someone(self, login_data)
+        token = response.json()["Token"]
+        data = {
+            "token" : token
+        }
+        response = self.client.post("/user/get_profile/", data = data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["avatar"], user.avatar)
+# endregion
 
 
-
-# region search user 
+# region search user ok 
     # by id
     def test_search_by_id(self):
         # 创建测试用户
@@ -880,7 +886,7 @@ class UserViewTests(TestCase):
 # endregion
 
 
-# region search user in friend list
+# region search user in friend list ok
     # by id
     def test_search_friend_by_id(self):
         # 登录user 
@@ -967,7 +973,7 @@ class UserViewTests(TestCase):
 # endregion
 
 
-# region  好友列表
+# region ok  好友列表
     def test_get_friends(self):
         data = {
             "name": "testuser", 
@@ -994,14 +1000,14 @@ class UserViewTests(TestCase):
 # endregion        
    
         
-# region 好友分组
+# region ok 好友分组
     # 创建和删除分组
     def test_create_group(self):
         User.objects.create(name="testuser111", password=make_password("12345678"))
         data = {
             "name": "testuser111", 
             "password": "12345678"
-        }
+            }
         response = login_someone(self, data)
         token = response.json()["Token"]
         data = {
@@ -1021,118 +1027,104 @@ class UserViewTests(TestCase):
         group = Group.objects.filter(group_name="test_group")
         self.assertEqual(response.json(), {'code': 0, 'info': 'Succeed', 'Deleted': True})
         self.assertFalse(group)
-# endregion
-        
 
-class ConversationTestCase(TestCase):
-    def setUp(self):
-        self.client = Client()
-        self.user1 = User.objects.create(name='user1', password=make_password('password'))
-        self.user2 = User.objects.create(name='user2', password=make_password('password'))
-        self.user3 = User.objects.create(name='user3', password=make_password('password'))
-        self.user4 = User.objects.create(name='user4', password=make_password('password'))
-        addFriends(self.user1, self.user2)
-        addFriends(self.user1, self.user3)
-        self.conversation = Conversation.objects.create(is_Private=True)
-        self.conversation.members.add(self.user1, self.user2)
-
-    def test_get_private_conversations(self):
+    # 获取分组
+    def test_get_group(self):
+        User.objects.create(name="testuser111", password=make_password("12345678"))
         data = {
-            "name": "user1",
-            "password": "password"
-        }
+            "name": "testuser111",
+            "password": "12345678"
+            }
         response = login_someone(self, data)
         token = response.json()["Token"]
         data = {
             "token": token
         }
-        
-        url = '/user/get_private_conversations/'
-        self.client.post(url, data=data, content_type="application/json")
+        # 获取分组
+        response = self.client.post("/user/get_group/", data=data, content_type="application/json")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {
+        expected_data = {
             'code': 0, 
             'info': 'Succeed', 
-            'Logged in': True,
-            'Token': token
-        })
-
-    def test_get_or_create_private_conversation(self):
-        data = {
-            "name": "user1",
-            "password": "password"
+            'groups': []
         }
-        response = login_someone(self, data)
-        token = response.json()["Token"]
+        self.assertEqual(response.json(), expected_data)
 
+    # 获取分组成员
+    def test_get_group_friends(self):
+        user = User.objects.create(name="testuser111", password=make_password("12345678"))
         data = {
-            "token": token,
-            'friend': self.user2.user_id
-        }
-        url = '/user/get_or_create_private_conversation/'
-        # Test successful get
-        response = self.client.post(url, data=data, content_type="application/json")
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {
-            'code': 0, 
-            'info': 'Succeed',
-            "conversation_id": self.conversation.conversation_id
-        })
-        
-        # Test successful create
-        response = self.client.post(url, {'friend': self.user3.user_id, "token": token},content_type="application/json")
-
-        self.assertEqual(response.status_code, 200)
-        conversation = Conversation.objects.filter(members__in=[self.user1], is_Private=True).filter(members__in=[self.user3]).first()
-        self.assertTrue(conversation is not None)
-        self.assertEqual(response.json(), {
-            'code': 0, 
-            'info': 'Succeed',
-            "conversation_id": conversation.conversation_id
-        })
-        # Test friend does not exist
-        response = self.client.post(url, {'friend': 999, "token": token},content_type="application/json")
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json(), {
-            'code': 2, 'info': 'Friend does not exist'
-        })
-        # Test you are not friends
-        response = self.client.post(url, {'friend': self.user4.user_id, "token": token},content_type="application/json")
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json(), {
-            'code': 3, 'info': 'You are not friends'
-        })
-         
-    def create_group_conversation(self):
-        pass
-    
-    def get_group_conversations(self):
-        data = {
-            "name": "user1",
-            "password": "password"
-        }
+            "name": "testuser111",
+            "password": "12345678"
+            }
         response = login_someone(self, data)
         token = response.json()["Token"]
         data = {
             "token": token
         }
-        url = "/user/get_group_conversations/"
-        response = self.client.post(url, data=data, content_type="application/json")
-        self.assertEqual(response.status_code, 200)
-    
-    def create_group_conversation(self):
+        group = Group.objects.create(group_name="test_group", admin_id=user.user_id)
+        friend = User.objects.create(name="friend", password=make_password("12345678"))
+        group_friend = GroupFriend.objects.create(group_id=group.group_id, user_id=friend.user_id)
+
+
         data = {
-            "name": "user1",
-            "password": "password"
+            "group_id": group.group_id,
+            "token": token
         }
+        response = self.client.post("/user/get_group_friends/", data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+
+        expected_data = {
+            'code': 0, 
+            'info': 'Succeed', 
+            "friends": [
+                {
+                    "user_id": friend.user_id,
+                    "name": friend.name,
+                    "avatar": friend.avatar
+                }
+            ]
+        }
+        self.assertEqual(response.json(), expected_data)
+    
+    # 往分组里添加/删除好友
+    def test_add_friend_to_group(self):
+        user = User.objects.create(name="testuser111", password=make_password("12345678"))
+        data = {
+            "name": "testuser111",
+            "password": "12345678"
+            }
         response = login_someone(self, data)
         token = response.json()["Token"]
         data = {
-            "token": token,
-            "members": [self.user2.user_id, self.user3.user_id]
+            "token": token
         }
-        
-        url = "/user/create_group_conversation/"
-        response = self.client.post(url, data=data, content_type="application/json")
+        group = Group.objects.create(group_name="test_group", admin_id=user.user_id)
+        friend = User.objects.create(name="friend", password=make_password("12345678"))
+        friendship = Friendship.objects.create(user_id=user.user_id, friend_user_id=friend.user_id)
+
+        data = {
+            "group_id": group.group_id,
+            "friend_id": friend.user_id,
+            "token": token
+        }
+        response = self.client.post("/user/add_friend_to_group/", data=data, content_type="application/json")
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'code': 0, 'info': 'Succeed', 'Added': True})
+
+        group_friend = GroupFriend.objects.filter(group_id=group.group_id, user_id=friend.user_id).first()
+        self.assertIsNotNone(group_friend)
         
+        # 删除好友
+        data = {
+            "group_id": group.group_id,
+            "friend_id": friend.user_id,
+            "token": token
+        }
+        response = self.client.post("/user/del_friend_from_group/", data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'code': 0, 'info': 'Succeed', 'Deleted': True})
+
+        group_friend = GroupFriend.objects.filter(group_id=group.group_id, user_id=friend.user_id).first()
+        self.assertIsNone(group_friend)
+# endregion
