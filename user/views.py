@@ -1473,7 +1473,7 @@ class UserViewSet(viewsets.ViewSet):
     
     @action(detail=False, methods=["POST"])
     @CheckLogin
-    def get_taskid(self, req: HttpRequest):
+    def voice2text(self, req: HttpRequest):
         body = json.loads(req.body.decode("utf-8"))
         url = body.get("url")
         try:
@@ -1495,31 +1495,27 @@ class UserViewSet(viewsets.ViewSet):
             resp = client.CreateRecTask(req)
 
             TaskId = resp.Data.TaskId
-            return request_success({"TaskId": TaskId})
 
-        except TencentCloudSDKException as err:
-            return request_failed(2, err)
-    
-    @action(detail=False, methods=["POST"])
-    @CheckLogin
-    def voice2text(self, req: HttpRequest):
-        body = json.loads(req.body.decode("utf-8"))
-        taskid = body.get("taskid")
-        try:
-            cred = credential.Credential("AKIDlQwHRMdmaFhx01d2C6nGSO5VgbIkwsXy", "GIqB9vUr1yhBSUFkyCnAHAsNdeS2Rksl")
-            client = asr_client.AsrClient(cred, "ap-guangzhou")
-
-            # 实例化一个请求对象,每个接口都会对应一个request对象
-            req = models.DescribeTaskStatusRequest()
+            req1 = models.DescribeTaskStatusRequest()
             params = {
-                "TaskId": taskid
+                "TaskId": TaskId
             }
-            req.from_json_string(json.dumps(params))
+            req1.from_json_string(json.dumps(params))
 
-            # 返回的resp是一个DescribeTaskStatusResponse的实例，与请求对象对应
-            resp = client.DescribeTaskStatus(req)
+            startTime = time.time()
+            while True:
+                resp1 = client.DescribeTaskStatus(req1)
 
-            result = resp.Data.Result.split()[1]
+                if resp1.Data.StatusStr == "success":
+                    break
+                else:
+                    pass
+                time.sleep(3)
+                endtime = time.time()
+                if endtime - startTime > 12:
+                    return request_failed({"Result": "获取结果超时"})
+            resp1 = client.DescribeTaskStatus(req1)
+            result = resp1.Data.Result.split()[1]
             return request_success({"Result": result})
 
         except TencentCloudSDKException as err:
