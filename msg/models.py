@@ -97,8 +97,6 @@ class Message(models.Model):
     delete_members = models.ManyToManyField(User, related_name="delete_members")
     # 提及
     mentioned_members = models.ManyToManyField(User, related_name="mentioned_members")
-    # 对方是否已读本条消息（用于私聊）
-    is_read = models.BooleanField(default=False)
 
     def serialize(self):
         return {
@@ -123,6 +121,5 @@ class Message(models.Model):
             "is_transmit": self.is_transmit,
             "transmit_with": [
                 msg.serialize() for msg in self.transmit_with.all()
-            ],
-            "is_read": self.is_read
+            ]
         }

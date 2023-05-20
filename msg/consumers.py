@@ -87,6 +87,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 quoted_msg = Message.objects.get(msg_id=quote_with)
                 quoted_msg.quoted_num += 1
                 quoted_msg.save()
+
+        @sync_to_async
+        def set_read_info():
+            user = self.user
+            msg_list = Message.objects.filter(conversation_id=self.conversation_id, is_Private=True).all()
+            for msg in msg_list:
+                msg.read_members.add(user)
+                msg.save()
                 
         text_data_json = json.loads(text_data)
         message = text_data_json["message"]
@@ -106,6 +114,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
         
         # 检查传入消息是否引用了其他消息 quote_with是被回复的消息的id
         quote_with = text_data_json.get("quote_with") if text_data_json.get("quote_with") is not None else -1 
+
+        # 检查是否是一个刷新消息
+        read = text_data_json.get("read")
+        if (read is None) and (read == True) and (self.conversation.is_Private == True):
+            await set_read_info()
 
         await set_quote_info()
         # @ 这条消息提到了谁 返回一个name的列表
@@ -155,7 +168,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             """
             获取被mentioned的群聊
             """
-            conversations = Conversation.objects.filter(is_Private=False, mentioned_members__in=[self.user]).all()
+            conversations = Conversation.objects.filter(is_Private=True, mentioned_members__in=[self.user]).all()
             conversation_ids = [conversation.conversation_id for conversation in conversations]
             return conversation_ids
 
@@ -229,11 +242,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
             conversation = self.conversation
             return user in conversation.mentioned_members.all()
         
+        @sync_to_async
+        def get_friend_read(msg: Message):
+            if self.conversation.is_Private == False:
+                return False
+            friend = self.conversation.members.all().exclude(user_id=self.user_id).first()
+            return friend in msg.read_members.all()
+        
         messages = []
         members = []
         nowpeople = self.user
         
-        async for msg in Message.objects.filter(conversation_id=self.conversation_id).order_by("create_time")[:1000]:
+        async for msg in Message.objects.filter(conversation_id=self.conversation_id).order_by("create_time")[:20]:
             if msg.create_time is not None:
                 create_time = msg.create_time.astimezone(pytz.timezone('Asia/Shanghai')).strftime("%m-%d %H:%M")
             else:
@@ -267,7 +287,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 "transmit_with": [
                     await async_serialize(m_msg) async for m_msg in msg.transmit_with.all()
                 ],
-                "is_read": msg.is_read                
+                "is_read": await get_friend_read(msg)            
             })
         
         # 获取本会话的所有其他成员
