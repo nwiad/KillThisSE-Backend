@@ -151,7 +151,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         str(self.conversation_id), {"type": "chat_message"}
                     )
                 else:  # 如果不是一个删除操作 则发送普通聊天消息
-                    if not read:
+                    if read is None:
                         await create_message()
                     await self.channel_layer.group_send(
                         str(self.conversation_id), {"type": "chat_message"}
@@ -254,7 +254,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         members = []
         nowpeople = self.user
         
-        async for msg in Message.objects.filter(conversation_id=self.conversation_id).order_by("create_time")[:20]:
+        async for msg in Message.objects.filter(conversation_id=self.conversation_id).order_by("create_time").all():
             if msg.create_time is not None:
                 create_time = msg.create_time.astimezone(pytz.timezone('Asia/Shanghai')).strftime("%m-%d %H:%M")
             else:
