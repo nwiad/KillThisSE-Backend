@@ -1250,8 +1250,12 @@ class UserViewSet(viewsets.ViewSet):
             return request_failed(2, "Conversation does not exist")
         msg_list = Message.objects.filter(conversation_id=conversation_id).all()
         unread_msg_list = [msg for msg in msg_list if (user not in msg.read_members.all() and user.user_id != msg.sender_id)]
-        return request_success({"UnreadMessages": len(unread_msg_list)})
-    
+        return request_success(
+            {
+                "UnreadMessages": len(unread_msg_list),
+            }
+        )
+
     @action(detail=False, methods=["POST"])
     @CheckLogin
     def set_read_message(self, req: HttpRequest):
@@ -1274,6 +1278,9 @@ class UserViewSet(viewsets.ViewSet):
         for msg in msg_list:
             msg.read_members.add(user)
         msg.save()
+        # 消除被mention的标记
+        if user in conversation.mentioned_members.all():
+            conversation.mentioned_members.remove(user)
         return request_success({"Set Read Messages": True})
     
     @action(detail=False, methods=["POST"])

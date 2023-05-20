@@ -215,7 +215,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
             return conv
 
-            
+        @sync_to_async
+        def get_unread_messages():
+            conversation_id = self.conversation_id
+            user = self.user
+            msg_list = Message.objects.filter(conversation_id=conversation_id).all()
+            unread_msg_list = [msg for msg in msg_list if (user not in msg.read_members.all() and user.user_id != msg.sender_id)]
+            return len(unread_msg_list)
+        
+        @sync_to_async
+        def check_mentioned():
+            user = self.user
+            conversation = self.conversation
+            return user in conversation.mentioned_members.all()
         
         messages = []
         members = []
@@ -228,7 +240,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 create_time = "N/A"  # or some other default value
         
             deletemsgusers = await del_message()
-            # 给前端传递的消息列表s
+
+            # 给前端传递的消息列表
             messages.append({
                 "conversation_id": self.conversation_id,
                 "msg_id": msg.msg_id,
@@ -253,7 +266,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 "is_transmit": msg.is_transmit,
                 "transmit_with": [
                     await async_serialize(m_msg) async for m_msg in msg.transmit_with.all()
-                ]
+                ],
             })
         
         # 获取本会话的所有其他成员
@@ -272,5 +285,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                                               "mentioned": mentioned_groups,
                                               "conversations": conv,
                                               "last_msg": last_msg_info,
-                                              "len_of_msgs": len(messages)
+                                              "len_of_msgs": len(messages),
+                                              "unread_msgs": await get_unread_messages(),
+                                              "mentioned": await check_mentioned()
                                               }))
