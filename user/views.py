@@ -1240,7 +1240,7 @@ class UserViewSet(viewsets.ViewSet):
     @CheckLogin
     def get_unread_messages(self, req: HttpRequest):
         """
-        用户获取某一聊天的未读消息数
+        用户获取某一聊天的未读消息数，目前已经弃用
         """
         user = get_user(req)
         body = json.loads(req.body.decode("utf-8"))

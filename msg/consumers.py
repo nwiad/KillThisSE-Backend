@@ -282,7 +282,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # 给前端发送的消息
         await self.send(text_data=json.dumps({"messages": messages, 
                                               "members": members, 
-                                              "mentioned": mentioned_groups,
+                                              # "mentioned": mentioned_groups,
                                               "conversations": conv,
                                               "last_msg": last_msg_info,
                                               "len_of_msgs": len(messages),
