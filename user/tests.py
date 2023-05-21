@@ -1916,3 +1916,518 @@ class GroupConversationTestCase2(TestCase):
         response = self.client.post("/user/get_sig/",{"token":token}, content_type="application/json")
         self.assertEqual(response.status_code, 200)
         self.assertTrue("sig" in response.json())
+
+
+class StickyConversationTestCase1(TestCase):
+    def setUp(self):
+        self.user1 = User.objects.create(name="user1", password=make_password("password"))
+        self.user2 = User.objects.create(name="user2", password=make_password("password"))
+        self.user3 = User.objects.create(name="user3", password=make_password("password"))
+        addFriends(self.user1, self.user2)
+        addFriends(self.user1, self.user3)
+        self.conversation = Conversation.objects.create(is_Private=True)
+        self.conversation.members.add(self.user1, self.user2)
+        
+    def test_set_sticky_conversation_set(self):
+        data = {
+            "name": "user1",
+            "password": "password"
+        }
+        response = login_someone(self, data)
+        token = response.json()["Token"]
+        # Set sticky to True
+        data = {
+            "conversation": self.conversation.conversation_id,
+            "sticky": "True",
+            "token": token
+        }
+        response = self.client.post("/user/set_sticky_conversation/", data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["Revised"], True)
+
+    def test_set_sticky_conversation_remove(self):
+        data = {
+            "name": "user1",
+            "password": "password"
+        }
+        response = login_someone(self, data)
+        token = response.json()["Token"]
+
+        # Set sticky to False
+        data = {
+            "conversation": self.conversation.conversation_id,
+            "sticky": "False",
+            "token": token
+        }
+        response = self.client.post("/user/set_sticky_conversation/", data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["Revised"], True)
+
+    def test_set_sticky_conversation_invalid_conversation(self):
+        data = {
+            "name": "user1",
+            "password": "password"
+        }
+        response = login_someone(self, data)
+        token = response.json()["Token"]
+        data = {
+            "conversation": 999,
+            "sticky": "True",
+            "token": token
+        }
+        response = self.client.post("/user/set_sticky_conversation/", data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], 2)
+              
+class StickyConversationTestCase2(TestCase):
+    def setUp(self):
+        self.user1 = User.objects.create(name="user1", password=make_password("password"))
+        self.user2 = User.objects.create(name="user2", password=make_password("password"))
+        self.user3 = User.objects.create(name="user3", password=make_password("password"))
+        addFriends(self.user1, self.user2)
+        addFriends(self.user1, self.user3)
+        self.private_conversation = Conversation.objects.create(is_Private=True)
+        self.private_conversation.members.add(self.user1, self.user2, self.user3)
+        self.private_conversation.sticky_members.add(self.user1)
+        self.group_conversation = Conversation.objects.create(is_Private=False)
+        self.group_conversation.members.add(self.user1, self.user2, self.user3)
+        self.group_conversation.sticky_members.add(self.user1)
+
+    def test_get_sticky_private_conversations(self):
+        data = {
+            "name": "user1",
+            "password": "password"
+        }
+        response = login_someone(self, data)
+        token = response.json()["Token"]
+
+        # Get sticky private conversations
+        data = {
+            "token": token
+        }
+        response = self.client.post("/user/get_sticky_private_conversations/", data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        conversations = response.json()["conversations"]
+        self.assertEqual(len(conversations), 1)
+        conversation = conversations[0]
+        self.assertEqual(conversation["id"], self.private_conversation.conversation_id)
+        self.assertEqual(conversation["friend_id"], self.user2.user_id)
+        self.assertEqual(conversation["friend_name"], self.user2.name)
+        self.assertEqual(conversation["friend_avatar"], self.user2.avatar)
+        self.assertTrue(conversation["is_Private"])
+        self.assertFalse(conversation["silent"])
+        self.assertTrue(conversation["sticked"])
+        self.assertFalse(conversation["disabled"])
+        self.assertFalse(conversation["validation"])
+
+    def test_get_sticky_group_conversations(self):
+        data = {
+            "name": "user1",
+            "password": "password"
+        }
+        response = login_someone(self, data)
+        token = response.json()["Token"]
+
+        # Get sticky group conversations
+        data = {
+            "token": token
+        }
+        response = self.client.post("/user/get_sticky_group_conversations/", data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        conversations = response.json()["conversations"]
+        self.assertEqual(len(conversations), 1)
+        conversation = conversations[0]
+        self.assertEqual(conversation["id"], self.group_conversation.conversation_id)
+        self.assertEqual(conversation["name"], self.group_conversation.conversation_name)
+        self.assertEqual(conversation["avatar"], self.group_conversation.conversation_avatar)
+        self.assertFalse(conversation["is_Private"])
+        self.assertFalse(conversation["silent"])
+        self.assertTrue(conversation["sticked"])
+        self.assertFalse(conversation["disabled"])
+        self.assertFalse(conversation["validation"])
+
+class UnreadMessageTestCase(TestCase):
+    def setUp(self):
+        self.user1 = User.objects.create(name="user1", password=make_password("password"))
+        self.user2 = User.objects.create(name="user2", password=make_password("password"))
+        self.conversation = Conversation.objects.create()
+        self.conversation.members.add(self.user1, self.user2)
+        self.message1 = Message.objects.create(conversation_id=self.conversation.conversation_id, sender_id=self.user1.user_id)
+        self.message2 = Message.objects.create(conversation_id=self.conversation.conversation_id, sender_id=self.user1.user_id)
+        self.message3 = Message.objects.create(conversation_id=self.conversation.conversation_id, sender_id=self.user2.user_id)
+        self.message4 = Message.objects.create(conversation_id=self.conversation.conversation_id, sender_id=self.user2.user_id)
+        self.message5 = Message.objects.create(conversation_id=self.conversation.conversation_id, sender_id=self.user1.user_id)
+        self.message6 = Message.objects.create(conversation_id=self.conversation.conversation_id, sender_id=self.user2.user_id)
+        self.message7 = Message.objects.create(conversation_id=self.conversation.conversation_id, sender_id=self.user2.user_id)
+        self.message8 = Message.objects.create(conversation_id=self.conversation.conversation_id, sender_id=self.user1.user_id)
+
+    def test_get_unread_messages(self):
+        data = {
+            "name": "user1",
+            "password": "password"
+        }
+        response = login_someone(self, data)
+        token = response.json()["Token"]
+
+        # Get unread messages
+        data = {
+            "conversation": self.conversation.conversation_id,
+            "token": token
+        }
+        response = self.client.post("/user/get_unread_messages/", data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+
+    def test_set_read_message(self):
+        data = {
+            "name": "user1",
+            "password": "password"
+        }
+        response = login_someone(self, data)
+        token = response.json()["Token"]
+
+        # Set read messages
+        data = {
+            "conversation": self.conversation.conversation_id,
+            "msg_id": self.message5.msg_id,
+            "token": token
+        }
+        response = self.client.post("/user/set_read_message/", data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'code': 0, 'info': 'Succeed', 'Set Read Messages': True})
+
+        # Check if the messages are marked as read
+        message_ids = [self.message1.msg_id, self.message2.msg_id, self.message3.msg_id,
+                       self.message4.msg_id, self.message5.msg_id]
+        for message_id in message_ids:
+            message = Message.objects.get(msg_id=message_id)
+            self.assertTrue(self.user1 in message.read_members.all())
+
+class SilentConversationTestCase(TestCase):
+    def setUp(self):
+        self.user1 = User.objects.create(name="user1", password=make_password("password"))
+        self.user2 = User.objects.create(name="user2", password=make_password("password"))
+        self.conversation = Conversation.objects.create()
+        self.conversation.members.add(self.user1, self.user2)
+
+    def test_set_silent_conversation(self):
+        data = {
+            "name": "user1",
+            "password": "password"
+        }
+        response = login_someone(self, data)
+        token = response.json()["Token"]
+
+        # Set conversation to silent
+        data = {
+            "conversation": self.conversation.conversation_id,
+            "silent": "True",
+            "token": token
+        }
+        response = self.client.post("/user/set_silent_conversation/", data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'code': 0, 'info': 'Succeed', 'Modified': True})
+
+        # Check if the user is in the silent members list
+        conversation = Conversation.objects.get(conversation_id=self.conversation.conversation_id)
+        self.assertTrue(self.user1 in conversation.silent_members.all())
+
+        # Unset conversation from silent
+        data = {
+            "conversation": self.conversation.conversation_id,
+            "silent": "False",
+            "token": token
+        }
+        response = self.client.post("/user/set_silent_conversation/", data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'code': 0, 'info': 'Succeed', 'Modified': True})
+
+        # Check if the user is removed from the silent members list
+        conversation = Conversation.objects.get(conversation_id=self.conversation.conversation_id)
+        self.assertFalse(self.user1 in conversation.silent_members.all())
+
+class QueryAllRecordsTestCase(TestCase):
+    def setUp(self):
+        self.user1 = User.objects.create(name="user1", password=make_password("password"))
+        self.user2 = User.objects.create(name="user2", password=make_password("password"))
+        self.conversation = Conversation.objects.create()
+        self.conversation.members.add(self.user1, self.user2)
+
+    def test_query_all_records(self):
+        data = {
+            "name": "user1",
+            "password": "password"
+        }
+        response = login_someone(self, data)
+        token = response.json()["Token"]
+
+        # Add some messages to the conversation
+        message1 = Message.objects.create(conversation_id=self.conversation.conversation_id, sender_id=self.user1.user_id, msg_body="Hello")
+        message2 = Message.objects.create(conversation_id=self.conversation.conversation_id, sender_id=self.user2.user_id, msg_body="Hi")
+
+        # Query all records
+        data = {
+            "conversation": self.conversation.conversation_id,
+            "token": token
+        }
+        response = self.client.post("/user/query_all_records/", data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        returned_messages = response.json()["messages"]
+
+        # Check if the returned messages match the added messages
+        self.assertEqual(len(returned_messages), 2)
+        self.assertEqual(returned_messages[0]["msg_id"], message1.msg_id)
+        self.assertEqual(returned_messages[0]["sender_id"], self.user1.user_id)
+        self.assertEqual(returned_messages[0]["msg_body"], "Hello")
+        self.assertEqual(returned_messages[1]["msg_id"], message2.msg_id)
+        self.assertEqual(returned_messages[1]["sender_id"], self.user2.user_id)
+        self.assertEqual(returned_messages[1]["msg_body"], "Hi")
+
+class QueryRecordsTestCase(TestCase):
+    def setUp(self):
+        self.user1 = User.objects.create(name="user1", password=make_password("password"))
+        self.user2 = User.objects.create(name="user2", password=make_password("password"))
+        self.conversation = Conversation.objects.create()
+        self.conversation.members.add(self.user1, self.user2)
+        self.message1 = Message.objects.create(conversation_id=self.conversation.conversation_id, sender_id=self.user1.user_id, msg_body="Hello")
+        self.message2 = Message.objects.create(conversation_id=self.conversation.conversation_id, sender_id=self.user2.user_id, msg_body="Hi")
+
+    def test_query_forward_records(self):
+        data = {
+            "name": "user1",
+            "password": "password"
+        }
+        response = login_someone(self, data)
+        token = response.json()["Token"]
+
+        # Query forward records
+        data = {
+            "msgidlist": [self.message1.msg_id, self.message2.msg_id],
+            "token": token
+        }
+        response = self.client.post("/user/query_forward_records/", data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        returned_messages = response.json()["messages"]
+
+        # Check if the returned messages match the added messages
+        self.assertEqual(len(returned_messages), 2)
+        self.assertEqual(returned_messages[0]["msg_id"], self.message1.msg_id)
+        self.assertEqual(returned_messages[0]["sender_id"], self.user1.user_id)
+        self.assertEqual(returned_messages[0]["msg_body"], "Hello")
+        self.assertEqual(returned_messages[1]["msg_id"], self.message2.msg_id)
+        self.assertEqual(returned_messages[1]["sender_id"], self.user2.user_id)
+        self.assertEqual(returned_messages[1]["msg_body"], "Hi")
+
+    def test_query_by_sender(self):
+        data = {
+            "name": "user1",
+            "password": "password"
+        }
+        response = login_someone(self, data)
+        token = response.json()["Token"]
+
+        # Query by sender
+        data = {
+            "conversation": self.conversation.conversation_id,
+            "sender": self.user1.user_id,
+            "token": token
+        }
+        response = self.client.post("/user/query_by_sender/", data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        returned_messages = response.json()["messages"]
+
+        # Check if the returned messages match the added messages
+        self.assertEqual(len(returned_messages), 1)
+        self.assertEqual(returned_messages[0]["msg_id"], self.message1.msg_id)
+        self.assertEqual(returned_messages[0]["sender_id"], self.user1.user_id)
+        self.assertEqual(returned_messages[0]["msg_body"], "Hello")
+
+    def test_query_by_content(self):
+        data = {
+            "name": "user1",
+            "password": "password"
+        }
+        response = login_someone(self, data)
+        token = response.json()["Token"]
+
+        # Query by content
+        data = {
+            "conversation": self.conversation.conversation_id,
+            "content": "Hi",
+            "token": token
+        }
+        response = self.client.post("/user/query_by_content/", data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        returned_messages = response.json()["messages"]
+
+        # Check if the returned messages match the added messages
+        self.assertEqual(len(returned_messages), 1)
+        self.assertEqual(returned_messages[0]["msg_id"], self.message2.msg_id)
+        self.assertEqual(returned_messages[0]["sender_id"], self.user2.user_id)
+        self.assertEqual(returned_messages[0]["msg_body"], "Hi")
+
+class QueryByTypeTestCase(TestCase):
+    def setUp(self):
+        self.user1 = User.objects.create(name="user1", password=make_password("password"))
+        self.user2 = User.objects.create(name="user2", password=make_password("password"))
+        self.conversation = Conversation.objects.create()
+        self.conversation.members.add(self.user1, self.user2)
+        self.message1 = Message.objects.create(conversation_id=self.conversation.conversation_id, sender_id=self.user1.user_id, is_image=True)
+        self.message2 = Message.objects.create(conversation_id=self.conversation.conversation_id, sender_id=self.user2.user_id, is_video=True)
+        self.message3 = Message.objects.create(conversation_id=self.conversation.conversation_id, sender_id=self.user1.user_id, is_file=True)
+        self.message4 = Message.objects.create(conversation_id=self.conversation.conversation_id, sender_id=self.user2.user_id, is_audio=True)
+
+    def test_query_by_type(self):
+        data = {
+            "name": "user1",
+            "password": "password"
+        }
+        response = login_someone(self, data)
+        token = response.json()["Token"]
+
+        # Query by type (image)
+        data = {
+            "conversation": self.conversation.conversation_id,
+            "type": "image",
+            "token": token
+        }
+        response = self.client.post("/user/query_by_type/", data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        returned_messages = response.json()["messages"]
+
+        # Check if the returned messages match the added messages with the specified type
+        self.assertEqual(len(returned_messages), 1)
+        self.assertEqual(returned_messages[0]["msg_id"], self.message1.msg_id)
+        self.assertEqual(returned_messages[0]["sender_id"], self.user1.user_id)
+        self.assertTrue(returned_messages[0]["is_image"])
+        self.assertFalse(returned_messages[0]["is_video"])
+        self.assertFalse(returned_messages[0]["is_file"])
+        self.assertFalse(returned_messages[0]["is_audio"])
+
+        # Query by type (video)
+        data = {
+            "conversation": self.conversation.conversation_id,
+            "type": "video",
+            "token": token
+        }
+        response = self.client.post("/user/query_by_type/", data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        returned_messages = response.json()["messages"]
+
+        # Check if the returned messages match the added messages with the specified type
+        self.assertEqual(len(returned_messages), 1)
+        self.assertEqual(returned_messages[0]["msg_id"], self.message2.msg_id)
+        self.assertEqual(returned_messages[0]["sender_id"], self.user2.user_id)
+        self.assertFalse(returned_messages[0]["is_image"])
+        self.assertTrue(returned_messages[0]["is_video"])
+        self.assertFalse(returned_messages[0]["is_file"])
+        self.assertFalse(returned_messages[0]["is_audio"])
+
+        # Query by type (file)
+        data = {
+            "conversation": self.conversation.conversation_id,
+            "type": "file",
+            "token": token
+        }
+        response = self.client.post("/user/query_by_type/", data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        returned_messages = response.json()["messages"]
+
+        # Check if the returned messages match the added messages with the specified type
+        self.assertEqual(len(returned_messages), 1)
+        self.assertEqual(returned_messages[0]["msg_id"], self.message3.msg_id)
+        self.assertEqual(returned_messages[0]["sender_id"], self.user1.user_id)
+        self.assertFalse(returned_messages[0]["is_image"])
+        self.assertFalse(returned_messages[0]["is_video"])
+        self.assertTrue(returned_messages[0]["is_file"])
+        self.assertFalse(returned_messages[0]["is_audio"])
+
+        # Query by type (audio)
+        data = {
+            "conversation": self.conversation.conversation_id,
+            "type": "audio",
+            "token": token
+        }
+        response = self.client.post("/user/query_by_type/", data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        returned_messages = response.json()["messages"]
+
+        # Check if the returned messages match the added messages with the specified type
+        self.assertEqual(len(returned_messages), 1)
+        self.assertEqual(returned_messages[0]["msg_id"], self.message4.msg_id)
+        self.assertEqual(returned_messages[0]["sender_id"], self.user2.user_id)
+        self.assertFalse(returned_messages[0]["is_image"])
+        self.assertFalse(returned_messages[0]["is_video"])
+        self.assertFalse(returned_messages[0]["is_file"])
+        self.assertTrue(returned_messages[0]["is_audio"])
+
+class MessageDetailsTestCase(TestCase):
+    def setUp(self):
+        self.user1 = User.objects.create(name="user1", password=make_password("password"))
+        self.user2 = User.objects.create(name="user2", password=make_password("password"))
+        self.conversation = Conversation.objects.create()
+        self.message = Message.objects.create(conversation_id=self.conversation.conversation_id, sender_id=self.user1.user_id)
+        self.message.mentioned_members.add(self.user2)
+        self.message.read_members.add(self.user1, self.user2)
+
+    def test_get_mentioned_members(self):
+        data = {
+            "name": "user1",
+            "password": "password"
+        }
+        response = login_someone(self, data)
+        token = response.json()["Token"]
+
+        # Get mentioned members
+        data = {
+            "msg_id": self.message.msg_id,
+            "token": token
+        }
+        response = self.client.post("/user/get_mentioned_members/", data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        returned_members = response.json()["mentioned_members"]
+
+        # Check if the returned members match the added mentioned members
+        self.assertEqual(len(returned_members), 1)
+        self.assertEqual(returned_members[0]["name"], self.user2.name)
+        self.assertTrue(returned_members[0]["read"])
+        self.assertEqual(returned_members[0]["avatar"], self.user2.avatar)
+
+    def test_get_read_members(self):
+        data = {
+            "name": "user1",
+            "password": "password"
+        }
+        response = login_someone(self, data)
+        token = response.json()["Token"]
+
+        # Get read members
+        data = {
+            "msg_id": self.message.msg_id,
+            "token": token
+        }
+        response = self.client.post("/user/get_read_members/", data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        returned_members = response.json()["read_members"]
+
+        # Check if the returned members match the added read members
+        self.assertEqual(len(returned_members), 2)
+        self.assertEqual(returned_members[0]["name"], self.user1.name)
+        self.assertEqual(returned_members[0]["avatar"], self.user1.avatar)
+        self.assertEqual(returned_members[1]["name"], self.user2.name)
+        self.assertEqual(returned_members[1]["avatar"], self.user2.avatar)
+
+    def test_voice2text_success(self):
+        data = {
+            "name": "user1",
+            "password": "password"
+        }
+        response = login_someone(self, data)
+        token = response.json()["Token"]
+        data = {
+            "url": "http://killthisse-avatar.oss-cn-beijing.aliyuncs.com/1684655227113recording.webm",
+            "token": token
+        }
+        response = self.client.post("/user/voice2text/", data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        result = response.json()["Result"]
+        self.assertEqual(result, "这是一条语音消息。")
