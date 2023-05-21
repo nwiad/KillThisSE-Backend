@@ -1515,7 +1515,11 @@ class UserViewSet(viewsets.ViewSet):
                 if endtime - startTime > 6:
                     return request_success({"Result": "[获取结果超时]"})
             resp1 = client.DescribeTaskStatus(req1)
-            result = resp1.Data.Result.split()[1]
+            splited = resp1.Data.Result.split()
+            if len(splited) >= 2:
+                result = splited[1]
+            else:
+                result = "[Ta似乎什么都没说]"
             return request_success({"Result": result})
 
         except TencentCloudSDKException as err:
