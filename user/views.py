@@ -1191,10 +1191,10 @@ class UserViewSet(viewsets.ViewSet):
         members = []
         for member_list in r_member_list:
             members += member_list
-        # deduplicate
-        members = list(set(members))
-        if user in members:
-            members.remove(user)
+
+        for member in members[:]:
+            if member.user_id == user.user_id:
+                member.remove(member)
         
         return_data = {
             "conversations": [ 
