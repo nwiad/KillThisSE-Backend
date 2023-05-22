@@ -53,11 +53,11 @@ class UserViewSet(viewsets.ViewSet):
         password = require(body, "password", "string", err_msg="Missing or error type of [password]")
 
         if not name_valid(name):
-            return request_failed(1, "Illegal username")
+            return request_failed(1, "用户名不合法")
         elif name_exist(name):
-            return request_failed(2, "Username already exists")    
+            return request_failed(2, "用户名已经存在")    
         elif not password_valid(password):
-            return request_failed(3, "Illegal password")        
+            return request_failed(3, "密码不合法")        
         else: # Successful Create
             user = User(name=name)
             user.set_password(password)
@@ -586,7 +586,7 @@ class UserViewSet(viewsets.ViewSet):
             members += member_list
         # deduplicate
         members = list(set(members))
-        if user in members:
+        if user in members[:]:
             members.remove(user)
         
         return_data = {
