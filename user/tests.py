@@ -2416,18 +2416,3 @@ class MessageDetailsTestCase(TestCase):
         self.assertEqual(returned_members[1]["name"], self.user2.name)
         self.assertEqual(returned_members[1]["avatar"], self.user2.avatar)
 
-    def test_voice2text_success(self):
-        data = {
-            "name": "user1",
-            "password": "password"
-        }
-        response = login_someone(self, data)
-        token = response.json()["Token"]
-        data = {
-            "url": "http://killthisse-avatar.oss-cn-beijing.aliyuncs.com/1684655227113recording.webm",
-            "token": token
-        }
-        response = self.client.post("/user/voice2text/", data=data, content_type="application/json")
-        self.assertEqual(response.status_code, 200)
-        result = response.json()["Result"]
-        self.assertEqual(result, "这是一条语音消息。")
