@@ -1194,7 +1194,7 @@ class UserViewSet(viewsets.ViewSet):
 
         for member in members[:]:
             if member.user_id == user.user_id:
-                member.remove(member)
+                members.remove(member)
         
         return_data = {
             "conversations": [ 
