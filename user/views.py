@@ -79,6 +79,9 @@ class UserViewSet(viewsets.ViewSet):
 # region 登录、登出相关功能
     @action(detail=False, methods=["POST"])
     def auto_login(self, req: HttpRequest):
+        """
+        已经弃用
+        """
         if get_user(req):
             return request_success({"Logged in": True})
         else:
@@ -91,14 +94,14 @@ class UserViewSet(viewsets.ViewSet):
         password = body.get('password')
 
         if not name_valid(name):
-            return request_failed(1, "Illegal username")
+            return request_failed(1, "用户名不合法")
         user = name_exist(name)
         if not user:
-            return request_failed(2, "User does not exist")
+            return request_failed(2, "用户不存在")
         if not user.check_password(password):
-            return request_failed(3, "Wrong password")
+            return request_failed(3, "用户名或密码错误")
         if user.disabled:
-            return request_failed(2, "User does not exist")
+            return request_failed(2, "用户不存在")
         if verify_user(user):
             Token.objects.filter(user=user).delete()
         
@@ -137,11 +140,11 @@ class UserViewSet(viewsets.ViewSet):
         email = body.get('email')
         user = User.objects.filter(user_email = email).first()
         if user.disabled:
-            return request_failed(2, "User does not exist")
+            return request_failed(2, "用户不存在")
         
         if(check_code(user, body.get('code_input'))):
             if time.time() - user.user_code_created_time > 120: # 验证码有效期2分钟
-                return request_failed(6, "Expired verification code")
+                return request_failed(6, "验证码已过期，请重新发送")
             if verify_user(user):
                 Token.objects.filter(user=user).delete()
             # Successful login
@@ -154,7 +157,7 @@ class UserViewSet(viewsets.ViewSet):
             # 发一次验证码只能输入一次，输入错误就要重新发送验证码
             user.user_code = 0
             user.save()
-            return request_failed(5, "Wrong verification code")
+            return request_failed(5, "验证码错误")
               
     @action(detail=False, methods=["POST"])
     @CheckLogin
@@ -174,9 +177,9 @@ class UserViewSet(viewsets.ViewSet):
         new_name = body.get('name')
 
         if not name_valid(new_name):
-            return request_failed(2, "Illegal username")
+            return request_failed(2, "用户名不合法")
         elif name_exist(new_name):
-            return request_failed(3, "Username already exists")
+            return request_failed(3, "用户名已经存在")
         else:
             user.name = new_name
 
@@ -191,7 +194,7 @@ class UserViewSet(viewsets.ViewSet):
         pwd = body.get("password")
         new_email = body.get("email")
         if not user.check_password(pwd):
-            return request_failed(2, "Wrong password")
+            return request_failed(2, "密码错误")
         user.user_email = new_email
         user.save()
         return request_success({"Reset": True})
@@ -206,7 +209,7 @@ class UserViewSet(viewsets.ViewSet):
 
         # 旧的密码正确性校验
         if not user.check_password(old_password):
-            return request_failed(2, "Wrong old password")
+            return request_failed(2, "旧密码错误")
         else:
             new_password = body.get('new_pwd')
             user.password = make_password(new_password)
@@ -253,13 +256,13 @@ class UserViewSet(viewsets.ViewSet):
         friend_user_id = body.get('friend_user_id')
         friend = User.objects.filter(user_id=friend_user_id).first()
         if not friend:
-            return request_failed(2, "target Friend not exist")
+            return request_failed(2, "搜索目标不存在")
         
         if isFriend(user, friend):
-            return request_failed(3, "Already become friends")
+            return request_failed(3, "你们已经是好友啦！")
         
         if requestExists(user, friend):
-            return request_failed(4, "Request already exists")
+            return request_failed(4, "请求已经存在，请耐心等待")
         elif requestExists(friend, user): 
             addFriends(user, friend)
             requestExists(friend, user).delete()
@@ -277,10 +280,10 @@ class UserViewSet(viewsets.ViewSet):
         friend_user_id = body.get('friend_user_id')
         friend = User.objects.filter(user_id=friend_user_id).first()
         if not friend:
-            return request_failed(1, "Friend not exist")
+            return request_failed(1, "用户不存在")
         
         if not requestExists(friend, user):
-            return request_failed(2, "Friend request doesn't exist")
+            return request_failed(2, "好友请求不存在")
         response = body.get('response')
 
         if response == "accept":
@@ -300,11 +303,11 @@ class UserViewSet(viewsets.ViewSet):
         friend = User.objects.filter(user_id=friend_id).first()
 
         if not friend:
-            return request_failed(2, "your Friend not exist")
+            return request_failed(2, "用户不存在")
         
         friendship = Friendship.objects.filter(user_id=user.user_id, friend_user_id=friend_id).first()
         if not friendship:
-            return request_failed(3, "Not your friend")
+            return request_failed(3, "Ta不是你的朋友T_T")
         
         Friendship.objects.filter(user_id=user.user_id, friend_user_id=friend_id).delete()
         Friendship.objects.filter(user_id=friend_id, friend_user_id=user.user_id).delete()
@@ -340,7 +343,7 @@ class UserViewSet(viewsets.ViewSet):
         name = body.get("name")
         target = User.objects.filter(name=name).first()
         if not target:
-            return request_failed(2, "Target user does not exist")
+            return request_failed(2, "目标用户不存在")
         return request_success({"avatar": target.avatar})
 
 # region 搜好友相关功能    
@@ -352,7 +355,7 @@ class UserViewSet(viewsets.ViewSet):
         friend = User.objects.filter(user_id=friend_user_id).first()
 
         if not friend:
-            return request_failed(2, "User searched by id not exist")
+            return request_failed(2, "查找用户不存在")
         
         return_data = return_field(friend.serialize(), ["user_id", "name", "avatar"])
         return request_success(return_data)
@@ -365,7 +368,7 @@ class UserViewSet(viewsets.ViewSet):
         friend = User.objects.filter(name=friend_name).first()
 
         if not friend:
-            return request_failed(2, "User searched by name not exist")
+            return request_failed(2, "查找用户不存在")
         
         return_data = return_field(friend.serialize(), ["user_id", "name", "avatar"])
         return request_success(return_data)
@@ -395,7 +398,7 @@ class UserViewSet(viewsets.ViewSet):
 
         friendship = Friendship.objects.filter(user_id=user.user_id, friend_user_id=friend_id)
         if not friendship:
-            return request_failed(2, "Friend searched by id not exist")
+            return request_failed(2, "查找用户不存在")
         else:
             friend = User.objects.filter(user_id=friend_id).first()
 
@@ -412,12 +415,12 @@ class UserViewSet(viewsets.ViewSet):
 
         friend = User.objects.filter(name=friend_name).first()
         if not friend:
-            return request_failed(2, "Friend searched by name not exist")
+            return request_failed(2, "查找用户不存在")
         
         friend_id = friend.user_id
         friendship = Friendship.objects.filter(user_id=user.user_id, friend_user_id=friend_id)
         if not friendship:
-            return request_failed(2, "Friend you search not exist")
+            return request_failed(2, "查找用户不存在")
 
         return_data = return_field(friend.serialize(), ["user_id", "name", "avatar"])
 
@@ -434,7 +437,7 @@ class UserViewSet(viewsets.ViewSet):
         group_name = body.get('name')
         group = Group.objects.filter(group_name=group_name).first()
         if group:
-            return request_failed(2, "Group name already exists")
+            return request_failed(2, "分组已经存在！")
         
         new_group = Group.objects.create(group_name=group_name, admin_id=user.user_id) #admin是拥有这个群组的人
         new_group.save()
@@ -451,9 +454,9 @@ class UserViewSet(viewsets.ViewSet):
         group_name = body.get('name')
         group = Group.objects.filter(group_name=group_name).first()
         if not group:
-            return request_failed(2, "Group not exist")
+            return request_failed(2, "分组不存在")
         if group.admin_id != user.user_id:
-            return request_failed(3, "You are not admin of this group")
+            return request_failed(3, "你并不是分组的管理者O_o")
         
         Group.objects.filter(group_id=group.group_id).delete()
         return request_success({"Deleted": True})
@@ -514,11 +517,11 @@ class UserViewSet(viewsets.ViewSet):
         
         friendship = Friendship.objects.filter(user_id=user.user_id, friend_user_id=friend_id)
         if not friendship:
-            return request_failed(4, "Friend not exist")
+            return request_failed(4, "你们并不是好友T_T")
         
         group_friend = GroupFriend.objects.filter(group_id=group_id, user_id=friend_id)
         if group_friend:
-            return request_failed(5, "Friend already in this group")
+            return request_failed(5, "Ta已经在这个分组里了")
         
         new_group_friend = GroupFriend.objects.create(group_id=group_id, user_id=friend_id)
         new_group_friend.save()
@@ -540,7 +543,7 @@ class UserViewSet(viewsets.ViewSet):
         
         friendship = Friendship.objects.filter(user_id=user.user_id, friend_user_id=friend_id)
         if not friendship:
-            return request_failed(4, "Friend not exist")
+            return request_failed(4, "你们并不是好友T_T")
         
         group_friend = GroupFriend.objects.filter(group_id=group_id, user_id=friend_id)
         if not group_friend:
@@ -883,7 +886,7 @@ class UserViewSet(viewsets.ViewSet):
         if user.check_password(password):
             return request_success({"Valid": True})
         else:
-            return request_failed(2, "Wrong password")
+            return request_failed(2, "密码错误")
 
     @action(detail=False, methods=["POST"])
     @CheckLogin
@@ -903,7 +906,7 @@ class UserViewSet(viewsets.ViewSet):
         for member_id in member_ids:
             member = User.objects.filter(user_id=member_id).first()
             if not member:
-                return request_failed(5, "User does not exist")
+                return request_failed(5, "用户不存在")
             if (not user.user_id == group_conversation.owner) and member in group_conversation.administrators.all():
                 return request_failed(3, "Permission denied")
             if member not in group_conversation.members.all():
