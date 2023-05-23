@@ -139,6 +139,8 @@ class UserViewSet(viewsets.ViewSet):
         body = json.loads(req.body.decode("utf-8"))
         email = body.get('email')
         user = User.objects.filter(user_email = email).first()
+        if not user:
+            return request_failed(2, "用户不存在")
         if user.disabled:
             return request_failed(2, "用户不存在")
         
@@ -267,6 +269,9 @@ class UserViewSet(viewsets.ViewSet):
             addFriends(user, friend)
             requestExists(friend, user).delete()
             return request_success({"Become Friends successfully": True})
+        
+        if friend.disabled == True:
+            return request_failed(5, "对方已经注销了ToT")
         
         sendFriendRequest(user, friend)
         return request_success({"Send request": True})
