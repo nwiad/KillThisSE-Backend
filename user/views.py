@@ -581,14 +581,14 @@ class UserViewSet(viewsets.ViewSet):
         """
         user = get_user(req)
         private_conversation_list = Conversation.objects.filter(members__in=[user], is_Private=True).exclude(sticky_members__in=[user])
-        r_member_list = [x.members.all() for x in private_conversation_list]
         members = []
+        r_member_list = [x.members.all() for x in private_conversation_list]
         for member_list in r_member_list:
             members += member_list
+        copied_members = members[:]
         for member in members[:]:
             if member.user_id == user.user_id:
                 members.remove(member)
-        
         return_data = {
             "conversations": [ 
                 {
