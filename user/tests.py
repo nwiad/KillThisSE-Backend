@@ -264,6 +264,16 @@ class UserViewTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json(),{'code': 5, 'info': '验证码错误'})
 
+
+    def test_not_exist_user_login_with_email(self):
+        data = {
+            "email": "DoesNotExist@Nope.com",
+            "code_input": 123456
+        }
+        response = self.client.post("/user/login_with_email/", data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(),{'code': 2, 'info': '用户不存在'})
+
 # endregion
 
 
