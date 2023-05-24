@@ -25,13 +25,6 @@ from tencentcloud.asr.v20190614 import asr_client, models
 
 api = TLSSigAPIv2.TLSSigAPIv2(1400811921, "d03af2f895d19f0f4f5fb180b3d79e9a8e6ae29e70a0553f5d8f0dd92d9bb693")
 
-def check_for_user_data(body):
-    name = require(body, "name", "string", err_msg="Missing or error type of [name]")
-    password = require(body, "password", "string", err_msg="Missing or error type of [password]")
-    email = require(body, "email", "string", err_msg="Missing or error type of [email]")
-    return name, password, email
-
-
 # 检查用户输入的验证码是否和之前发送的一致
 def check_code(user, code):
     # 如果code的类型是string 转为数字
