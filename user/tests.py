@@ -881,6 +881,26 @@ class UserViewTests(TestCase):
         # 删除测试用户
         user.delete()
 
+    # 
+    def test_by_id(self):
+        # 创建测试用户
+        user = User.objects.create(name="test_user", password=make_password("password"))
+        
+        # 登录user 
+        login_data = {"name": "test_user", "password": "password"}
+        response = login_someone(self, login_data)
+        token = response.json()["Token"]
+        teuser = User.objects.get(name="testuser")
+        # 模拟请求 成功
+        data={
+            "friend_user_id": teuser.user_id,
+            "token": token
+        }
+        response = self.client.post("/user/search_by_id/", data, content_type="application/json")
+
+        # 断言响应状态码
+        self.assertEqual(response.status_code, 200)
+
     # by name
     def test_search_by_id(self):
         # 创建测试用户
