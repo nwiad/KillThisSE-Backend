@@ -536,15 +536,13 @@ class UserViewSet(viewsets.ViewSet):
         group_id = body.get('group_id')
         friend_id = body.get('friend_id')
         group = Group.objects.filter(group_id=group_id).first()
-        if not group:
-            return request_failed(2, "Group not exist")
-        if group.admin_id != user.user_id:
-            return request_failed(3, "You are not admin of this group")
-        
         friendship = Friendship.objects.filter(user_id=user.user_id, friend_user_id=friend_id)
         if not friendship:
             return request_failed(4, "你们并不是好友T_T")
-        
+        if not group:
+            return request_failed(2, "Group not exist")
+        if group.admin_id != user.user_id:
+            return request_failed(3, "You are not admin of this group")        
         group_friend = GroupFriend.objects.filter(group_id=group_id, user_id=friend_id)
         if not group_friend:
             return request_failed(5, "Friend not in this group")
