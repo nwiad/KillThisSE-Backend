@@ -30,7 +30,7 @@ def CheckLogin(check_fn):
         if record:
             return check_fn(*args, **kwargs)
         else:
-            return request_failed(1, "Not logged in", 400)
+            return request_failed(1, "Not logged in", 401)
     return decorated
 
 

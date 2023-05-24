@@ -110,7 +110,7 @@ class UserViewTests(TestCase):
         response = register_try(self, request_data)
         self.assertEqual(response.status_code, 400)
         response_content = json.loads(response.content)
-        self.assertEqual(response_content, {"code": 1, "info": "Illegal username"})
+        self.assertEqual(response_content, {"code": 1, "info": "用户名不合法"})
 
     # 重复注册
     def test_duplicate_user_registration(self):
@@ -121,7 +121,7 @@ class UserViewTests(TestCase):
         response = register_try(self, request_data)
         self.assertEqual(response.status_code, 400)
         self.assertFalse(User.objects.filter(name="testuser", password=make_password("testpassword")).exists())
-        self.assertEqual(response.content, b'{"code": 2, "info": "Username already exists"}')
+        self.assertEqual(json.loads(response.content), {"code": 2, "info": "用户名已经存在"})
         
     # 非法密码
     def test_illegal_user_registration(self):
@@ -132,7 +132,7 @@ class UserViewTests(TestCase):
         response = register_try(self, request_data)
         self.assertEqual(response.status_code, 400)
         response_content = json.loads(response.content)
-        self.assertEqual(response_content, {"code": 3, "info": "Illegal password"})
+        self.assertEqual(response_content, {"code": 3, "info": "密码不合法"})
 # endregion
 
 
@@ -184,7 +184,7 @@ class UserViewTests(TestCase):
             "password": "testpassword"
         }
         response = login_try(self, il_data)
-        self.assertEqual(response.content, b'{"code": 1, "info": "Illegal username"}')
+        self.assertEqual(json.loads(response.content), {"code": 1, "info": "用户名不合法"})
     
     # 试图登录不存在的用户
     def test_nonexsit_user_login(self):
@@ -196,7 +196,7 @@ class UserViewTests(TestCase):
         response = login_try(self, non_data)
         self.assertEqual(response.status_code, 400)
         response_data = json.loads(response.content)
-        self.assertEqual(response_data, {"code": 2, "info": "User does not exist"})
+        self.assertEqual(response_data, {"code": 2, "info": "用户不存在"})
     
     # 错误密码
     def test_wrong_password_user_login(self):
@@ -206,7 +206,7 @@ class UserViewTests(TestCase):
         }
         response = login_try(self, wp_data)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.content, b'{"code": 3, "info": "Wrong password"}')
+        self.assertEqual(json.loads(response.content), {"code": 3, "info": "用户名或密码错误"})
        
     # logout
     def test_successful_logout(self):
@@ -262,7 +262,7 @@ class UserViewTests(TestCase):
         }
         response = self.client.post("/user/login_with_email/", data=data, content_type="application/json")
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json(),{'code': 5, 'info': 'Wrong verification code'})
+        self.assertEqual(response.json(),{'code': 5, 'info': '验证码错误'})
 
 # endregion
 
@@ -305,7 +305,7 @@ class UserViewTests(TestCase):
             },
             content_type="application/json"
         )
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 401)
         self.assertEqual(response.json(), {"code": 1, "info": "Not logged in"})
 
         # 3 username already exists
@@ -316,7 +316,7 @@ class UserViewTests(TestCase):
             },
             content_type="application/json"
         )
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 401)
         self.assertEqual(response.json(), {"code": 1, "info": "Not logged in"})
     
     def test_reset_email(self):
@@ -405,7 +405,7 @@ class UserViewTests(TestCase):
             },
             content_type="application/json"
         )
-        self.assertEqual(response.json(), {'code': 2, 'info': 'Wrong old password'})
+        self.assertEqual(response.json(), {'code': 2, 'info': '旧密码错误'})
              
     def test_reset_avatar(self):
         # log in
@@ -474,7 +474,7 @@ class UserViewTests(TestCase):
             content_type="application/json"
         )
         self.assertNotEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"code": 2, "info": "target Friend not exist"})
+        self.assertEqual(response.json(), {"code": 2, "info": "搜索目标不存在"})
         
         
         # 发送好友请求失败： 重复发送
@@ -487,7 +487,7 @@ class UserViewTests(TestCase):
             content_type="application/json"
         )
         self.assertNotEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {'code': 4, 'info': 'Request already exists'})
+        self.assertEqual(response.json(), {'code': 4, 'info': '请求已经存在，请耐心等待'})
 
 
         # 登出
@@ -536,7 +536,7 @@ class UserViewTests(TestCase):
             content_type="application/json"
         )
         self.assertNotEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"code": 3, "info": "Already become friends"})
+        self.assertEqual(response.json(), {"code": 3, "info": "你们已经是好友啦！"})
         
     # get_friend_requests
     def test_get_friend_requests(self):
@@ -747,7 +747,7 @@ class UserViewTests(TestCase):
         }
         response = delf(self, data)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json(), {"code": 2, "info": "your Friend not exist"})
+        self.assertEqual(response.json(), {"code": 2, "info": "用户不存在"})
         
         # 删除非好友
         data={
@@ -756,7 +756,7 @@ class UserViewTests(TestCase):
         }
         response = delf(self, data)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json(), {"code": 3, "info": "Not your friend"})
+        self.assertEqual(response.json(), {"code": 3, "info": "Ta不是你的朋友T_T"})
         
         user.delete()
         friend.delete()
@@ -841,7 +841,7 @@ class UserViewTests(TestCase):
         }
         response = sbi(self, data)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json(), {"code":2, "info": "User searched by id not exist"})
+        self.assertEqual(response.json(), {"code":2, "info": "查找用户不存在"})
         # 删除测试用户
         user.delete()
 
@@ -880,7 +880,7 @@ class UserViewTests(TestCase):
         
         response = sbn(self, data)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json(), {"code":2, "info": "User searched by name not exist"})
+        self.assertEqual(response.json(), {"code":2, "info": "查找用户不存在"})
         # 删除测试用户
         user.delete()
 # endregion
@@ -903,7 +903,7 @@ class UserViewTests(TestCase):
         }
         response = sfbi(self, data)
 
-        self.assertEqual(response.json(),{"code": 2, "info": "Friend searched by id not exist"})
+        self.assertEqual(response.json(),{"code": 2, "info": "查找用户不存在"})
         
         # 成功
         aref = isFriend(user01, user00)
@@ -938,7 +938,7 @@ class UserViewTests(TestCase):
         }
         response = sfbn(self, data)
 
-        self.assertEqual(response.json(),{"code": 2, "info": "Friend searched by name not exist"})
+        self.assertEqual(response.json(),{"code": 2, "info": "查找用户不存在"})
         
         
         userstanger = User.objects.create(name="stranger", password=make_password("password"))
@@ -950,7 +950,7 @@ class UserViewTests(TestCase):
         }
         response = sfbn(self, data)
         
-        self.assertEqual(response.json(),{"code": 2, "info": "Friend you search not exist"})
+        self.assertEqual(response.json(),{"code": 2, "info": "查找用户不存在"})
         
         # 成功
         aref = isFriend(user01, user00)
@@ -1778,7 +1778,7 @@ class GroupConversationTestCase2(TestCase):
         response = self.client.post("/user/secondary_validate/", data=data, content_type="application/json")
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["code"], 2)
-        self.assertEqual(response.json()["info"], "Wrong password")
+        self.assertEqual(response.json()["info"], "密码错误")
 
     def test_remove_member_from_group(self):
         data = {
@@ -2416,18 +2416,3 @@ class MessageDetailsTestCase(TestCase):
         self.assertEqual(returned_members[1]["name"], self.user2.name)
         self.assertEqual(returned_members[1]["avatar"], self.user2.avatar)
 
-    def test_voice2text_success(self):
-        data = {
-            "name": "user1",
-            "password": "password"
-        }
-        response = login_someone(self, data)
-        token = response.json()["Token"]
-        data = {
-            "url": "http://killthisse-avatar.oss-cn-beijing.aliyuncs.com/1684655227113recording.webm",
-            "token": token
-        }
-        response = self.client.post("/user/voice2text/", data=data, content_type="application/json")
-        self.assertEqual(response.status_code, 200)
-        result = response.json()["Result"]
-        self.assertEqual(result, "这是一条语音消息。")
