@@ -118,6 +118,8 @@ class UserViewSet(viewsets.ViewSet):
         # 基本信息格式校验
         email = body.get('email')
         user = User.objects.filter(user_email=email).first()
+        if not user:
+            return request_failed(2, "该邮箱没有绑定任何用户！")
         # 生成六位数字验证码
         code = random.randint(100000, 999999)
                
