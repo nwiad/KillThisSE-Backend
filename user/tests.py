@@ -811,6 +811,23 @@ class UserViewTests(TestCase):
         response = self.client.post("/user/get_profile/", data = data, content_type="application/json")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["avatar"], user.avatar)
+
+    def test_get_avatar(self):
+        user = User.objects.create(
+            name="test_user", 
+            password=make_password("password")
+            )
+        # 登录user 
+        login_data = {"name": "test_user", "password": "password"}
+        response = login_someone(self, login_data)
+        token = response.json()["Token"]
+        data = {
+            "token" : token,
+            "name": "Whatever"
+        }
+        response = self.client.post("/user/get_avatar/", data = data, content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {"code": 2, "info": "目标用户不存在"})
 # endregion
 
 
@@ -1152,6 +1169,27 @@ class ConversationTestCasenaive(TestCase):
         addFriends(self.user1, self.user3)
         self.conversation = Conversation.objects.create(is_Private=True)
         self.conversation.members.add(self.user1, self.user2)
+
+    # 获取对方信息
+    def test_get_friend_by_conversation(self):
+        data = {
+            "name": "user1",
+            "password": "password"
+        }
+        response = login_someone(self, data)
+        token = response.json()["Token"]
+        data = {
+            "token": token,
+            "conversation": 114514
+        }
+        
+        url = '/user/get_friend_by_conversation/'
+        response = self.client.post(url, data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {
+            'code': 2, 
+            'info': 'Conversation does not exist', 
+        })
 
     # 获取所有的私聊会话
     def test_get_private_conversations(self):
