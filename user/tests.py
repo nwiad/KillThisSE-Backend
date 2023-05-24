@@ -305,7 +305,7 @@ class UserViewTests(TestCase):
             },
             content_type="application/json"
         )
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 401)
         self.assertEqual(response.json(), {"code": 1, "info": "Not logged in"})
 
         # 3 username already exists
@@ -316,7 +316,7 @@ class UserViewTests(TestCase):
             },
             content_type="application/json"
         )
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 401)
         self.assertEqual(response.json(), {"code": 1, "info": "Not logged in"})
     
     def test_reset_email(self):
