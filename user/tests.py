@@ -264,7 +264,7 @@ class UserViewTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json(),{'code': 5, 'info': '验证码错误'})
 
-
+    # 登陆不存在的邮箱
     def test_not_exist_user_login_with_email(self):
         data = {
             "email": "DoesNotExist@Nope.com",
@@ -273,6 +273,15 @@ class UserViewTests(TestCase):
         response = self.client.post("/user/login_with_email/", data=data, content_type="application/json")
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json(),{'code': 2, 'info': '用户不存在'})
+
+    # 往不存在的邮箱发验证码
+    def test_not_exist_email(self):
+        data = {
+            "email": "Whatever@1919810.com"
+        }
+        response = self.client.post("/user/send_email_for_login/", data=data, content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(),{'code': 2, 'info': '该邮箱没有绑定任何用户！'})
 
 # endregion
 
